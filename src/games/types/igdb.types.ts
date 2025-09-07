@@ -43,3 +43,11 @@ export interface IGDBApiResponse extends Omit<IGDBResponse, 'body'> {
     formData(): Promise<FormData>;
     clone(): IGDBApiResponse;
 }
+
+export interface IGDBGetGameResponse {
+    id: number;
+    cover: number;
+    name: string;
+    release_dates: number[];
+    summary: string;
+}
