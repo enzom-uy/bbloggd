@@ -1,33 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { DATABASE_CONNECTION } from 'src/db/db.module';
+import * as schema from '../../drizzle/schema';
+import { InferSelectModel, sql } from 'drizzle-orm';
+
+type Game = InferSelectModel<typeof schema.games>;
 
 @Injectable()
 export class GamesService {
-  async searchGames(gameName: string) {
-    // Aquí irá tu lógica para buscar juegos
-    // Por ahora, solo devolvemos un mensaje
-    return {
-      message: `Searching for games with name: ${gameName}`,
-      query: gameName
-    };
-  }
+    constructor(
+        @Inject(DATABASE_CONNECTION)
+        private readonly db: PostgresJsDatabase<typeof schema>,
+    ) {}
 
-  create(createGameDto) {
-    return 'This action adds a new game';
-  }
+    // TODO: this
+    async searchGames(gameName: string) {
+        const gamesTable = schema.games;
 
-  findAll() {
-    return `This action returns all games`;
-  }
+        // TODO: check db first
+        const result: Game[] = await this.db.execute(
+            sql`select * from ${gamesTable} where ${gamesTable.title} like ${'%' + gameName + '%'}`,
+        );
 
-  findOne(id: number) {
-    return `This action returns a #${id} game`;
-  }
+        if (result.length < 1) {
+            console.log('No games found');
+        }
 
-  update(id: number) {
-    return `This action updates a #${id} game`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} game`;
-  }
+        return {
+            message: `Searching for games with name: ${gameName}`,
+            query: gameName,
+        };
+    }
 }

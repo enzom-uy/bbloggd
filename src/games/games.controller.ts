@@ -8,7 +8,6 @@ export class GamesController {
 
   @Get('/search')
   async getGameInfo(@Query() queryParams: GetGameInfoDto) {
-    // Ahora puedes acceder al query validado
     return await this.gamesService.searchGames(queryParams.game_name);
   }
 }
