@@ -22,3 +22,10 @@ interface GetCompanyResponseBody {
 }
 
 export type GetCompanyResponse = GetCompanyResponseBody[] | [];
+
+interface GetReleaseDateResponseBody {
+    id: number;
+    date: number;
+}
+
+export type GetReleaseDateResponse = GetReleaseDateResponseBody[] | [];

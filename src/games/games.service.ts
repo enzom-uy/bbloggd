@@ -23,16 +23,17 @@ export class GamesService {
             sql`SELECT * FROM ${gamesTable} WHERE ${gamesTable.igdbId} = ${gameId}`,
         );
 
-        const doesntExistInDb = result.rows.length < 1;
+        const gameDoesntExistInDb = result.rows.length < 1;
 
-        if (doesntExistInDb) {
+        if (gameDoesntExistInDb) {
             console.log('No games found in db.');
 
+            // GET GAME DATA FROM IGDB
             // TODO: remember to change the fields to the ones you actually want and update typescript interface :)
             // Also check how to get release dates properly (use stalker 2 for testing heh)
             const igdbResponse = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
-                body: `fields name,summary,release_dates,cover,involved_companies;
+                body: `fields name,summary,release_dates,cover,involved_companies,first_release_date,slug,genres;
                         limit 1;
                         where id =  ${gameId};`,
             });
@@ -46,6 +47,7 @@ export class GamesService {
 
             const uuid = randomUUID();
 
+            // GET GAME COVER URL
             // TODO: Use Promise.all to get all the data at once
             const coverUrl = await this.gameUtilsService.getGameCoverUrl(
                 `${igdbGames[0].cover}`,
@@ -53,8 +55,7 @@ export class GamesService {
 
             if (!coverUrl) return { message: 'No cover found.' };
 
-            console.log('coverUrl:', coverUrl);
-
+            // GET GAME PUBLISHER AND DEVELOPER
             const companiesData = {
                 developer: '',
                 publisher: '',
@@ -67,8 +68,6 @@ export class GamesService {
                             `${company}`,
                         );
 
-                    console.log('companyData:', companyData);
-
                     if (!companyData) return { message: 'No company found.' };
 
                     if (companyData.developer) {
@@ -79,28 +78,36 @@ export class GamesService {
                 }
             }
 
+            // GET GAME RELEASE DATE IN ISO FORMAT
+            const gameReleaseDate = this.gameUtilsService.getReleaseDate(
+                igdbGames[0].first_release_date,
+            );
+
+            if (!gameReleaseDate) return { message: 'No release date found.' };
+
             const gameObject: schema.NewGame = {
                 id: uuid,
                 coverUrl,
                 description: igdbGames[0].summary,
+                slug: igdbGames[0].slug,
                 igdbId: igdbGames[0].id,
                 title: igdbGames[0].name,
                 developer: companiesData.developer,
                 publisher: companiesData.publisher,
-                releaseDate: null,
+                releaseDate: gameReleaseDate,
             };
 
-            // TODO: implement
-            // for (const game of igdbGames) {
-            //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            //     const insertGameToDb = await this.db.execute(
-            //         sql`INSERT INTO ${gamesTable}
-            //             (id, title, description, releaseDate, coverUrl, developer, publisher, igdbId)
-            //             VALUES
-            //             (${uuid}, )
-            //         `,
-            //     );
-            // }
+            console.log('Final gameObject:', gameObject);
+
+            const insertGameToDb = await this.db.execute(
+                sql`
+                INSERT INTO ${gamesTable} (id, title, description, release_date, cover_url, developer, publisher, igdb_id)
+                VALUES (${gameObject.id}, ${gameObject.title}, ${gameObject.description}, ${gameObject.releaseDate}, ${gameObject.coverUrl}, ${gameObject.developer}, ${gameObject.publisher}, ${gameObject.igdbId})
+                RETURNING *
+                `,
+            );
+            console.log('insertGameToDb:', insertGameToDb);
+            return { message: 'Game added to database.' };
         }
 
         return {

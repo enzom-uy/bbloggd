@@ -51,4 +51,7 @@ export interface IGDBGetGameResponse {
     release_dates: number[];
     summary: string;
     involved_companies: number[];
+    first_release_date: number;
+    slug: string;
+    genres: number[];
 }

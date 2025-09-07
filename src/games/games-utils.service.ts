@@ -5,6 +5,7 @@ import {
     GetCoverUrlResponse,
     GetInvolvedCompaniesResponse,
 } from './types/games-utils.types';
+import { DateTime } from 'luxon';
 
 @Injectable()
 export class GameUtilsService {
@@ -31,8 +32,12 @@ export class GameUtilsService {
         return formattedUrl;
     }
 
-    // TODO: implement
-    async getReleaseDate(): Promise<any> {}
+    getReleaseDate(igdbDate: number): string | null {
+        if (!igdbDate) return null;
+
+        const parsedDate = DateTime.fromSeconds(igdbDate).toISO();
+        return parsedDate;
+    }
 
     async getInvolvedCompanies(
         companyId: string,
@@ -77,7 +82,7 @@ export class GameUtilsService {
 
             if (companyResult.length === 0) {
                 console.log('No company entity found');
-                continue; // Continúa con la siguiente compañía en lugar de retornar
+                break;
             }
 
             companyObject.name = companyResult[0].name;
@@ -89,4 +94,7 @@ export class GameUtilsService {
 
         return companyObject;
     }
+
+    // TODO: implement
+    async getGenres(genreIds: number[]) {}
 }

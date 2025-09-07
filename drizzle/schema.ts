@@ -82,6 +82,7 @@ export const games = pgTable(
         id: varchar({ length: 36 }).primaryKey().notNull(),
         title: varchar({ length: 255 }).notNull(),
         description: text(),
+        slug: text().notNull(),
         releaseDate: date('release_date'),
         coverUrl: text('cover_url'),
         developer: varchar({ length: 255 }),
