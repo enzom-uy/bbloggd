@@ -16,12 +16,11 @@ export class GamesService {
         private readonly gameUtilsService: GameUtilsService,
     ) {}
 
-    // TODO: this
-    async searchGames(gameName: string) {
+    async getGameById(gameId: string) {
         const gamesTable = schema.games;
 
         const result = await this.db.execute(
-            sql`SELECT * FROM ${gamesTable} WHERE ${gamesTable.title} LIKE ${'%' + gameName + '%'}`,
+            sql`SELECT * FROM ${gamesTable} WHERE ${gamesTable.igdbId} = ${gameId}`,
         );
 
         const doesntExistInDb = result.rows.length < 1;
@@ -35,7 +34,7 @@ export class GamesService {
                 url: 'https://api.igdb.com/v4/games',
                 body: `fields name,summary,release_dates,cover,involved_companies;
                         limit 1;
-                        search "${gameName}";`,
+                        where id =  ${gameId};`,
             });
 
             if (igdbResponse.status === 200) {
@@ -47,6 +46,8 @@ export class GamesService {
                 }
 
                 const uuid = randomUUID();
+
+                // TODO: Use Promise.all to get all the data at once
                 const coverUrl = await this.gameUtilsService.getGameCoverUrl(
                     `${igdbGames[0].cover}`,
                 );
@@ -54,6 +55,18 @@ export class GamesService {
                 if (!coverUrl) return { message: 'No cover found.' };
 
                 console.log('coverUrl:', coverUrl);
+
+                for (const game of igdbGames) {
+                    for (const company of game.involved_companies) {
+                        const companyData =
+                            await this.gameUtilsService.getInvolvedCompanies(
+                                `${company}`,
+                            );
+
+                        if (!companyData)
+                            return { message: 'No company found.' };
+                    }
+                }
 
                 // TODO: implement
                 // for (const game of igdbGames) {
@@ -70,13 +83,13 @@ export class GamesService {
 
             return {
                 message: 'No games found in db',
-                query: gameName,
+                query: gameId,
             };
         }
 
         return {
-            message: `Searching for games with name: ${gameName}`,
-            query: gameName,
+            message: `Searching for games with name: ${gameId}`,
+            query: gameId,
         };
     }
 }
