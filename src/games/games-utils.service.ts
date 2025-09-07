@@ -8,7 +8,6 @@ import {
 
 @Injectable()
 export class GameUtilsService {
-    // TODO: implement
     async getGameCoverUrl(coverId: string): Promise<string | null> {
         if (!coverId) return null;
 
@@ -29,17 +28,15 @@ export class GameUtilsService {
         if (result.length === 0) return null;
 
         const formattedUrl = `https:${result[0].url.replace('t_thumb', `t_1080p`)}`;
-        // Add https to the url
         return formattedUrl;
     }
 
     // TODO: implement
     async getReleaseDate(): Promise<any> {}
 
-    // TODO: implement
     async getInvolvedCompanies(
         companyId: string,
-    ): Promise<{ name: string; developer: boolean }[] | null> {
+    ): Promise<{ name: string; developer: boolean | null } | null> {
         if (!companyId) return null;
         console.log('Company ID que llega al service utils: ', companyId);
 
@@ -60,7 +57,10 @@ export class GameUtilsService {
             return null;
         }
 
-        const companies: Array<{ name: string; developer: boolean }> = []; // Array de objetos
+        const companyObject: { name: string; developer: boolean | null } = {
+            name: '',
+            developer: null,
+        };
 
         for (const company of getInvolvedCompaniesResult) {
             const fetchCompany = await igdbFetch({
@@ -80,14 +80,13 @@ export class GameUtilsService {
                 continue; // Continúa con la siguiente compañía en lugar de retornar
             }
 
-            // Agregar la compañía al array en lugar de retornar inmediatamente
-            companies.push({
-                name: companyResult[0].name,
-                developer: company.developer === true,
-            });
+            companyObject.name = companyResult[0].name;
+            companyObject.developer =
+                typeof company.developer === 'boolean'
+                    ? company.developer
+                    : null;
         }
 
-        console.log('Variable companies al final: ', companies);
-        return companies; // Retornar el array completo al final
+        return companyObject;
     }
 }

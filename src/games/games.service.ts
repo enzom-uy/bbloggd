@@ -36,55 +36,71 @@ export class GamesService {
                         limit 1;
                         where id =  ${gameId};`,
             });
+            const igdbGames =
+                (await igdbResponse.json()) as IGDBGetGameResponse[];
+            const noIGDBFound = igdbGames.length < 1;
 
-            if (igdbResponse.status === 200) {
-                const igdbGames =
-                    (await igdbResponse.json()) as IGDBGetGameResponse[];
-
-                if (igdbGames.length < 1) {
-                    return { message: 'No games found.' };
-                }
-
-                const uuid = randomUUID();
-
-                // TODO: Use Promise.all to get all the data at once
-                const coverUrl = await this.gameUtilsService.getGameCoverUrl(
-                    `${igdbGames[0].cover}`,
-                );
-
-                if (!coverUrl) return { message: 'No cover found.' };
-
-                console.log('coverUrl:', coverUrl);
-
-                for (const game of igdbGames) {
-                    for (const company of game.involved_companies) {
-                        const companyData =
-                            await this.gameUtilsService.getInvolvedCompanies(
-                                `${company}`,
-                            );
-
-                        if (!companyData)
-                            return { message: 'No company found.' };
-                    }
-                }
-
-                // TODO: implement
-                // for (const game of igdbGames) {
-                //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                //     const insertGameToDb = await this.db.execute(
-                //         sql`INSERT INTO ${gamesTable}
-                //             (id, title, description, releaseDate, coverUrl, developer, publisher, igdbId)
-                //             VALUES
-                //             (${uuid}, )
-                //         `,
-                //     );
-                // }
+            if (noIGDBFound) {
+                return { message: 'No games found.', query: gameId };
             }
 
-            return {
-                message: 'No games found in db',
-                query: gameId,
+            const uuid = randomUUID();
+
+            // TODO: Use Promise.all to get all the data at once
+            const coverUrl = await this.gameUtilsService.getGameCoverUrl(
+                `${igdbGames[0].cover}`,
+            );
+
+            if (!coverUrl) return { message: 'No cover found.' };
+
+            console.log('coverUrl:', coverUrl);
+
+            const companiesData = {
+                developer: '',
+                publisher: '',
             };
+
+            for (const game of igdbGames) {
+                for (const company of game.involved_companies) {
+                    const companyData =
+                        await this.gameUtilsService.getInvolvedCompanies(
+                            `${company}`,
+                        );
+
+                    console.log('companyData:', companyData);
+
+                    if (!companyData) return { message: 'No company found.' };
+
+                    if (companyData.developer) {
+                        companiesData.developer = companyData.name;
+                    } else {
+                        companiesData.publisher = companyData.name;
+                    }
+                }
+            }
+
+            const gameObject: schema.NewGame = {
+                id: uuid,
+                coverUrl,
+                description: igdbGames[0].summary,
+                igdbId: igdbGames[0].id,
+                title: igdbGames[0].name,
+                developer: companiesData.developer,
+                publisher: companiesData.publisher,
+                releaseDate: null,
+            };
+
+            // TODO: implement
+            // for (const game of igdbGames) {
+            //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            //     const insertGameToDb = await this.db.execute(
+            //         sql`INSERT INTO ${gamesTable}
+            //             (id, title, description, releaseDate, coverUrl, developer, publisher, igdbId)
+            //             VALUES
+            //             (${uuid}, )
+            //         `,
+            //     );
+            // }
         }
 
         return {
