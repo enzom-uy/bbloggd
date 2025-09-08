@@ -8,6 +8,27 @@
       "when": 1757210740978,
       "tag": "0000_fantastic_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1757370794647,
+      "tag": "0001_new_inhumans",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1757371587505,
+      "tag": "0002_jittery_punisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1757372765433,
+      "tag": "0003_cultured_tag",
+      "breakpoints": true
     }
   ]
 }

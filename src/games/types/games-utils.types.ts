@@ -29,3 +29,11 @@ interface GetReleaseDateResponseBody {
 }
 
 export type GetReleaseDateResponse = GetReleaseDateResponseBody[] | [];
+
+export interface GetGenresResponseBody {
+    id: number;
+    name: string;
+    slug: string;
+}
+
+export type GetGenresResponse = GetGenresResponseBody[] | [];

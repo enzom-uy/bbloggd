@@ -101,6 +101,24 @@ export const games = pgTable(
             'btree',
             table.title.asc().nullsLast().op('text_ops'),
         ),
+        unique('games_slug_unique').on(table.slug),
+        unique('games_igdb_id_unique').on(table.igdbId),
+    ],
+);
+
+export const genres = pgTable(
+    'genres',
+    {
+        id: varchar({ length: 36 }).primaryKey().notNull(),
+        name: varchar({ length: 50 }).notNull(),
+        slug: varchar({ length: 100 }).notNull(),
+    },
+    (table) => [
+        index('idx_genres_slug').using(
+            'btree',
+            table.slug.asc().nullsLast().op('text_ops'),
+        ),
+        unique('genres_name_slug_unique').on(table.name, table.slug),
     ],
 );
 
@@ -109,20 +127,20 @@ export const gameGenres = pgTable(
     {
         id: varchar({ length: 36 }).primaryKey().notNull(),
         gameId: varchar('game_id', { length: 36 }).notNull(),
-        genreName: varchar('genre_name', { length: 50 }).notNull(),
-        slug: varchar('slug', { length: 50 }).notNull(),
+        genreId: varchar('genre_id', { length: 36 }).notNull(),
     },
     (table) => [
-        index('idx_game_genres_genre_name').using(
-            'btree',
-            table.genreName.asc().nullsLast().op('text_ops'),
-        ),
+        unique('game_genres_game_genre_unique').on(table.gameId, table.genreId),
         foreignKey({
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'game_genres_game_id_fkey',
         }),
-        unique('game_genres_genre_name_key').on(table.genreName),
+        foreignKey({
+            columns: [table.genreId],
+            foreignColumns: [genres.id],
+            name: 'game_genres_genre_id_fkey',
+        }),
     ],
 );
 
@@ -140,6 +158,10 @@ export const reviewLikes = pgTable(
             foreignColumns: [reviews.id],
             name: 'review_likes_review_id_fkey',
         }).onDelete('cascade'),
+        unique('review_likes_user_review_unique').on(
+            table.userId,
+            table.reviewId,
+        ),
         foreignKey({
             columns: [table.userId],
             foreignColumns: [users.id],
@@ -261,17 +283,45 @@ export const userActivity = pgTable(
     ],
 );
 
-export const reviews = pgTable('reviews', {
-    id: varchar({ length: 36 }).primaryKey().notNull(),
-    userId: varchar('user_id', { length: 36 }).notNull(),
-    gameId: varchar('game_id', { length: 36 }).notNull(),
-    body: text(),
-    rating: numeric({ precision: 2, scale: 1 }).notNull(),
-    createdAt: timestamp('created_at', { mode: 'string' })
-        .defaultNow()
-        .notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }),
-});
+export const reviews = pgTable(
+    'reviews',
+    {
+        id: varchar({ length: 36 }).primaryKey().notNull(),
+        userId: varchar('user_id', { length: 36 }).notNull(),
+        gameId: varchar('game_id', { length: 36 }).notNull(),
+        body: text(),
+        rating: numeric({ precision: 2, scale: 1 }).notNull(),
+        createdAt: timestamp('created_at', { mode: 'string' })
+            .defaultNow()
+            .notNull(),
+        updatedAt: timestamp('updated_at', { mode: 'string' }),
+    },
+    (table) => [
+        unique('reviews_user_game_unique').on(table.userId, table.gameId),
+        foreignKey({
+            columns: [table.userId],
+            foreignColumns: [users.id],
+            name: 'reviews_user_id_fkey',
+        }).onDelete('cascade'),
+        foreignKey({
+            columns: [table.gameId],
+            foreignColumns: [games.id],
+            name: 'reviews_game_id_fkey',
+        }).onDelete('cascade'),
+
+        index('idx_reviews_game_created').using(
+            'btree',
+            table.gameId.asc(),
+            table.createdAt.desc(),
+        ),
+        // Índice compuesto para obtener reviews de un usuario ordenadas por rating
+        index('idx_reviews_user_rating').using(
+            'btree',
+            table.userId.asc(),
+            table.rating.desc(),
+        ),
+    ],
+);
 
 export const usersSocialLinks = pgTable(
     'users_social_links',
@@ -304,6 +354,10 @@ export const collectionGames = pgTable(
         gameId: varchar('game_id', { length: 36 }).notNull(),
     },
     (table) => [
+        unique('collection_games_collection_game_unique').on(
+            table.collectionId,
+            table.gameId,
+        ),
         foreignKey({
             columns: [table.collectionId],
             foreignColumns: [collections.id],
@@ -366,6 +420,7 @@ export const userGames = pgTable(
             'btree',
             table.status.asc().nullsLast().op('enum_ops'),
         ),
+        unique('user_games_user_game_unique').on(table.userId, table.gameId),
         foreignKey({
             columns: [table.userId],
             foreignColumns: [users.id],

@@ -1,14 +1,25 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { igdbFetch } from 'src/utils/igdb.utils';
 import {
     GetCompanyResponse,
     GetCoverUrlResponse,
+    GetGenresResponse,
+    GetGenresResponseBody,
     GetInvolvedCompaniesResponse,
 } from './types/games-utils.types';
+import * as schema from '../../drizzle/schema';
 import { DateTime } from 'luxon';
+import { DATABASE_CONNECTION } from 'src/db/db.module';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class GameUtilsService {
+    constructor(
+        @Inject(DATABASE_CONNECTION)
+        private readonly db: NodePgDatabase<typeof schema>,
+    ) {}
     async getGameCoverUrl(coverId: string): Promise<string | null> {
         if (!coverId) return null;
 
@@ -95,6 +106,45 @@ export class GameUtilsService {
         return companyObject;
     }
 
-    // TODO: implement
-    async getGenres(genreIds: number[]) {}
+    async insertGenres(genreIds: number[], gameId: string) {
+        if (!genreIds) return null;
+
+        const response = await igdbFetch({
+            url: 'https://api.igdb.com/v4/genres',
+            body: `fields name, slug;
+       where id = (${genreIds.join(',')});`,
+        });
+
+        if (response.status !== 200) return null;
+        const result = (await response.json()) as GetGenresResponse;
+        console.log(result);
+        if (result.length === 0) return null;
+
+        const genreValues = result.map(
+            (g: GetGenresResponseBody) =>
+                sql`(${randomUUID()}, ${g.name}, ${g.slug})`,
+        );
+
+        await this.db.execute(
+            sql`
+            INSERT INTO ${schema.genres} (id, name, slug)
+            VALUES ${sql.join(genreValues, sql`, `)}
+            ON CONFLICT ON CONSTRAINT genres_name_slug_unique DO NOTHING
+          `,
+        );
+
+        const gameGenreInserts = result.map((g: GetGenresResponseBody) => {
+            return sql`(${randomUUID()}, ${gameId}, (SELECT id FROM ${schema.genres} WHERE name = ${g.name}))`;
+        });
+
+        await this.db.execute(
+            sql`
+        INSERT INTO ${schema.gameGenres} (id, game_id, genre_id)
+        VALUES ${sql.join(gameGenreInserts, sql`, `)}
+        ON CONFLICT ON CONSTRAINT game_genres_game_genre_unique DO NOTHING
+        `,
+        );
+
+        return;
+    }
 }

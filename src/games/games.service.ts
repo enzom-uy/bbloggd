@@ -45,7 +45,7 @@ export class GamesService {
                 return { message: 'No games found.', query: gameId };
             }
 
-            const uuid = randomUUID();
+            const gameDbId = randomUUID();
 
             // GET GAME COVER URL
             // TODO: Use Promise.all to get all the data at once
@@ -85,8 +85,10 @@ export class GamesService {
 
             if (!gameReleaseDate) return { message: 'No release date found.' };
 
+            // GET GAME GENRES
+
             const gameObject: schema.NewGame = {
-                id: uuid,
+                id: gameDbId,
                 coverUrl,
                 description: igdbGames[0].summary,
                 slug: igdbGames[0].slug,
@@ -101,12 +103,17 @@ export class GamesService {
 
             const insertGameToDb = await this.db.execute(
                 sql`
-                INSERT INTO ${gamesTable} (id, title, description, release_date, cover_url, developer, publisher, igdb_id)
-                VALUES (${gameObject.id}, ${gameObject.title}, ${gameObject.description}, ${gameObject.releaseDate}, ${gameObject.coverUrl}, ${gameObject.developer}, ${gameObject.publisher}, ${gameObject.igdbId})
+                INSERT INTO ${gamesTable} (id, title, description, release_date, cover_url, developer, publisher, igdb_id, slug)
+                VALUES (${gameObject.id}, ${gameObject.title}, ${gameObject.description}, ${gameObject.releaseDate}, ${gameObject.coverUrl}, ${gameObject.developer}, ${gameObject.publisher}, ${gameObject.igdbId}, ${gameObject.slug})
                 RETURNING *
                 `,
             );
             console.log('insertGameToDb:', insertGameToDb);
+
+            await this.gameUtilsService.insertGenres(
+                igdbGames[0].genres,
+                gameDbId,
+            );
             return { message: 'Game added to database.' };
         }
 
