@@ -110,6 +110,7 @@ export const gameGenres = pgTable(
         id: varchar({ length: 36 }).primaryKey().notNull(),
         gameId: varchar('game_id', { length: 36 }).notNull(),
         genreName: varchar('genre_name', { length: 50 }).notNull(),
+        slug: varchar('slug', { length: 50 }).notNull(),
     },
     (table) => [
         index('idx_game_genres_genre_name').using(
