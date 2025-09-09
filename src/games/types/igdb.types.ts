@@ -44,7 +44,7 @@ export interface IGDBApiResponse extends Omit<IGDBResponse, 'body'> {
     clone(): IGDBApiResponse;
 }
 
-export interface IGDBGetGameResponse {
+export interface IGDBGame {
     id: number;
     cover: number;
     name: string;

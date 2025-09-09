@@ -1,12 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE_CONNECTION } from 'src/db/db.module';
 import * as schema from '../../drizzle/schema';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { GameUtilsService } from './games-utils.service';
 import { igdbFetch } from 'src/utils/igdb.utils';
-import { IGDBGetGameResponse } from './types/igdb.types';
+import { IGDBGame } from './types/igdb.types';
 
 @Injectable()
 export class GamesService {
@@ -19,9 +19,10 @@ export class GamesService {
     private readonly gamesTable = schema.games;
 
     private async findGameInDatabase(gameId: string) {
-        const result = await this.db.execute(
-            sql`SELECT * FROM ${this.gamesTable} WHERE ${this.gamesTable.igdbId} = ${gameId}`,
-        );
+        const result = await this.db
+            .select()
+            .from(this.gamesTable)
+            .where(eq(this.gamesTable.igdbId, Number(gameId)));
         return result;
     }
 
@@ -52,14 +53,13 @@ export class GamesService {
         return companiesData;
     }
 
-    async getGameById(gameId: string) {
-        const existingGame = await this.findGameInDatabase(gameId);
+    async getGameById(gameId: string): Promise<{
+        game: schema.Game | null;
+        message: string;
+    }> {
+        const gameInDb = await this.findGameInDatabase(gameId);
 
-        const gameDoesntExistInDb = existingGame.rows.length < 1;
-
-        if (gameDoesntExistInDb) {
-            console.log('No games found in db.');
-
+        if (gameInDb.length === 0) {
             // GET GAME DATA FROM IGDB
             const igdbResponse = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
@@ -67,12 +67,14 @@ export class GamesService {
                         limit 1;
                         where id =  ${gameId};`,
             });
-            const igdbGame =
-                (await igdbResponse.json()) as IGDBGetGameResponse[];
+            const igdbGame = (await igdbResponse.json()) as IGDBGame[];
             const noIGDBGameFound = igdbGame.length < 1;
 
             if (noIGDBGameFound) {
-                return { message: 'No games found.', query: gameId };
+                return {
+                    game: null,
+                    message: `No games found with ID ${gameId}.`,
+                };
             }
 
             const gameDbId = randomUUID();
@@ -81,7 +83,7 @@ export class GamesService {
                 `${igdbGame[0].cover}`,
             );
 
-            if (!coverUrl) return { message: 'No cover found.' };
+            if (!coverUrl) return { message: 'No cover found.', game: null };
 
             // GET GAME PUBLISHER AND DEVELOPER
             const companiesData = await this.getGameCompanies(
@@ -89,7 +91,7 @@ export class GamesService {
             );
 
             if (!companiesData) {
-                return { message: 'No company data found.' };
+                return { message: 'No company data found.', game: null };
             }
 
             // GET GAME RELEASE DATE IN ISO FORMAT
@@ -97,7 +99,8 @@ export class GamesService {
                 igdbGame[0].first_release_date,
             );
 
-            if (!gameReleaseDate) return { message: 'No release date found.' };
+            if (!gameReleaseDate)
+                return { message: 'No release date found.', game: null };
 
             // GET GAME GENRES
 
@@ -115,25 +118,25 @@ export class GamesService {
 
             console.log('Final gameObject:', gameObject);
 
-            const insertGameToDb = await this.db.execute(
-                sql`
-                INSERT INTO ${this.gamesTable} (id, title, description, release_date, cover_url, developer, publisher, igdb_id, slug)
-                VALUES (${gameObject.id}, ${gameObject.title}, ${gameObject.description}, ${gameObject.releaseDate}, ${gameObject.coverUrl}, ${gameObject.developer}, ${gameObject.publisher}, ${gameObject.igdbId}, ${gameObject.slug})
-                RETURNING *
-                `,
-            );
-            console.log('insertGameToDb:', insertGameToDb);
+            const insertedGame = await this.db
+                .insert(this.gamesTable)
+                .values(gameObject)
+                .returning();
+            console.log('insertGameToDb:', insertedGame[0]);
 
             await this.gameUtilsService.insertGenres(
                 igdbGame[0].genres,
                 gameDbId,
             );
-            return { message: 'Game added to database.' };
+            return {
+                game: insertedGame[0],
+                message: `Game with ID ${gameId} added to database.`,
+            };
         }
 
         return {
-            message: `Searching for games with name: ${gameId}`,
-            query: gameId,
+            game: gameInDb[0],
+            message: `Game with ID ${gameId} already exists in Database.`,
         };
     }
 
