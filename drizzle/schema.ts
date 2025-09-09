@@ -135,12 +135,12 @@ export const gameGenres = pgTable(
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'game_genres_game_id_fkey',
-        }),
+        }).onDelete('cascade'),
         foreignKey({
             columns: [table.genreId],
             foreignColumns: [genres.id],
             name: 'game_genres_genre_id_fkey',
-        }),
+        }).onDelete('cascade'),
     ],
 );
 
