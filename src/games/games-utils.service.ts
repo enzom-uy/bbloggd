@@ -116,29 +116,39 @@ export class GameUtilsService {
         console.log(result);
         if (result.length === 0) return null;
 
-        const genreValues = result.map(
-            (g: IGDBGenre) => sql`(${randomUUID()}, ${g.name}, ${g.slug})`,
-        );
+        const genreValues = result.map((g: IGDBGenre) => ({
+            id: randomUUID(),
+            name: g.name,
+            slug: g.slug,
+        }));
 
-        await this.db.execute(
-            sql`
-            INSERT INTO ${schema.genres} (id, name, slug)
-            VALUES ${sql.join(genreValues, sql`, `)}
-            ON CONFLICT ON CONSTRAINT genres_name_slug_unique DO NOTHING
-          `,
-        );
+        await this.db
+            .insert(schema.genres)
+            .values(genreValues)
+            .onConflictDoNothing({
+                target: [schema.genres.name, schema.genres.slug],
+            });
 
-        const gameGenreInserts = result.map((g: IGDBGenre) => {
-            return sql`(${randomUUID()}, ${gameId}, (SELECT id FROM ${schema.genres} WHERE name = ${g.name}))`;
-        });
+        const gameGenreValues = result
+            .map((g: IGDBGenre) => {
+                const genre = genreValues.find(
+                    (genre) => genre.slug === g.slug,
+                );
+                if (!genre?.id) return null;
+                return {
+                    id: randomUUID(),
+                    gameId: gameId,
+                    genreId: genre.id,
+                };
+            })
+            .filter((value) => value !== null);
 
-        await this.db.execute(
-            sql`
-        INSERT INTO ${schema.gameGenres} (id, game_id, genre_id)
-        VALUES ${sql.join(gameGenreInserts, sql`, `)}
-        ON CONFLICT ON CONSTRAINT game_genres_game_genre_unique DO NOTHING
-        `,
-        );
+        await this.db
+            .insert(schema.gameGenres)
+            .values(gameGenreValues)
+            .onConflictDoNothing({
+                target: [schema.gameGenres.gameId, schema.gameGenres.genreId],
+            });
 
         return;
     }

@@ -473,6 +473,9 @@ export type NewUser = typeof users.$inferInsert;
 export type UserGame = typeof userGames.$inferSelect;
 export type NewUserGame = typeof userGames.$inferInsert;
 
+export type Genre = typeof genres.$inferSelect;
+export type NewGenre = typeof genres.$inferInsert;
+
 // Enum types
 export type ActivityType = (typeof activityType.enumValues)[number];
 export type UserGameStatus = (typeof userGameStatus.enumValues)[number];
