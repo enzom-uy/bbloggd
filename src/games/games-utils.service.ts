@@ -1,11 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { igdbFetch } from 'src/utils/igdb.utils';
 import {
-    GetCompanyResponse,
     GetCoverUrlResponse,
-    GetGenresResponse,
-    GetGenresResponseBody,
-    GetInvolvedCompaniesResponse,
+    IGDBGenre,
+    IGDBInvolvedCompany,
+    IGDBCompany,
 } from './types/games-utils.types';
 import * as schema from '../../drizzle/schema';
 import { DateTime } from 'luxon';
@@ -66,7 +65,7 @@ export class GameUtilsService {
         if (response.status !== 200) return null;
 
         const getInvolvedCompaniesResult =
-            (await response.json()) as GetInvolvedCompaniesResponse;
+            (await response.json()) as IGDBInvolvedCompany[];
 
         if (getInvolvedCompaniesResult.length === 0) {
             console.log('No involved_companies entity found');
@@ -78,30 +77,27 @@ export class GameUtilsService {
             developer: null,
         };
 
-        for (const company of getInvolvedCompaniesResult) {
-            const fetchCompany = await igdbFetch({
-                url: 'https://api.igdb.com/v4/companies',
-                body: `limit 1;
-                        fields name;
-                        where id = ${company.company};`,
-            });
+        const involvedCompaniesResult = (
+            await Promise.all(
+                getInvolvedCompaniesResult.map(
+                    async (company: IGDBInvolvedCompany) => {
+                        const fetchCompany = await igdbFetch({
+                            url: 'https://api.igdb.com/v4/companies',
+                            body: `limit 1;
+                                fields name;
+                                where id = ${company.company};`,
+                        });
+                        const result =
+                            (await fetchCompany.json()) as IGDBCompany[];
+                        console.log('RESULT!!!!!: ', result);
+                        companyObject.name = result[0].name;
+                        companyObject.developer = company.developer;
 
-            if (fetchCompany.status !== 200) return null;
-
-            const companyResult =
-                (await fetchCompany.json()) as GetCompanyResponse;
-
-            if (companyResult.length === 0) {
-                console.log('No company entity found');
-                break;
-            }
-
-            companyObject.name = companyResult[0].name;
-            companyObject.developer =
-                typeof company.developer === 'boolean'
-                    ? company.developer
-                    : null;
-        }
+                        return result;
+                    },
+                ),
+            )
+        ).flat();
 
         return companyObject;
     }
@@ -116,13 +112,12 @@ export class GameUtilsService {
         });
 
         if (response.status !== 200) return null;
-        const result = (await response.json()) as GetGenresResponse;
+        const result = (await response.json()) as IGDBGenre[];
         console.log(result);
         if (result.length === 0) return null;
 
         const genreValues = result.map(
-            (g: GetGenresResponseBody) =>
-                sql`(${randomUUID()}, ${g.name}, ${g.slug})`,
+            (g: IGDBGenre) => sql`(${randomUUID()}, ${g.name}, ${g.slug})`,
         );
 
         await this.db.execute(
@@ -133,7 +128,7 @@ export class GameUtilsService {
           `,
         );
 
-        const gameGenreInserts = result.map((g: GetGenresResponseBody) => {
+        const gameGenreInserts = result.map((g: IGDBGenre) => {
             return sql`(${randomUUID()}, ${gameId}, (SELECT id FROM ${schema.genres} WHERE name = ${g.name}))`;
         });
 
