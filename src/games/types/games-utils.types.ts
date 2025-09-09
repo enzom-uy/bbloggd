@@ -5,35 +5,33 @@ interface GetCoverUrlResponseBody {
 
 export type GetCoverUrlResponse = GetCoverUrlResponseBody[] | [];
 
-interface GetInvolvedCompaniesResponseBody {
+export interface IGDBInvolvedCompany {
     id: number;
     developer: boolean;
     publisher: boolean;
     company: number;
 }
 
-export type GetInvolvedCompaniesResponse =
-    | GetInvolvedCompaniesResponseBody[]
-    | [];
+export type GetInvolvedCompaniesResponse = IGDBInvolvedCompany[] | [];
 
-interface GetCompanyResponseBody {
+export interface IGDBCompany {
     id: number;
     name: string;
 }
 
-export type GetCompanyResponse = GetCompanyResponseBody[] | [];
+export type GetCompanyResponse = IGDBCompany[] | [];
 
-interface GetReleaseDateResponseBody {
+export interface IGDBReleaseDate {
     id: number;
     date: number;
 }
 
-export type GetReleaseDateResponse = GetReleaseDateResponseBody[] | [];
+export type GetReleaseDateResponse = IGDBReleaseDate[] | [];
 
-export interface GetGenresResponseBody {
+export interface IGDBGenre {
     id: number;
     name: string;
     slug: string;
 }
 
-export type GetGenresResponse = GetGenresResponseBody[] | [];
+export type GetGenresResponse = IGDBGenre[] | [];
