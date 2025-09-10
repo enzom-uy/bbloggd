@@ -1,0 +1,1 @@
+ALTER TABLE "games" ALTER COLUMN "igdb_id" SET NOT NULL;

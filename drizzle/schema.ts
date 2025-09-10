@@ -88,7 +88,7 @@ export const games = pgTable(
         developer: varchar({ length: 255 }),
         publisher: varchar({ length: 255 }),
         // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-        igdbId: bigint('igdb_id', { mode: 'number' }),
+        igdbId: bigint('igdb_id', { mode: 'number' }).notNull(),
         createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
         updatedAt: timestamp('updated_at', { mode: 'string' }),
     },

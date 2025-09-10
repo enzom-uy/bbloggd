@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE_CONNECTION } from 'src/db/db.module';
 import * as schema from '../../drizzle/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, ilike, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { GameUtilsService } from './games-utils.service';
@@ -140,5 +140,58 @@ export class GamesService {
         };
     }
 
-    async getGameSearchSuggestions(query: string) {}
+    async getGameSearchSuggestions(
+        gameName: string,
+    ): Promise<{ games: { igdbId: number; name: string }[]; message: string }> {
+        const apiCalls = await Promise.allSettled([
+            await this.db
+                .select({
+                    igdbId: this.gamesTable.igdbId,
+                    name: this.gamesTable.title,
+                })
+                .from(this.gamesTable)
+                .where(ilike(this.gamesTable.title, `%${gameName}%`))
+                .limit(5),
+            await igdbFetch({
+                url: 'https://api.igdb.com/v4/games',
+                body: `fields name,summary,cover,involved_companies, first_release_date,slug,genres;
+                        limit 6;
+                        where name ~ *"${gameName}"* & version_parent = null & parent_game = null & version_parent = null;`,
+            }).then((res) => res.json()),
+        ]);
+        const gamesInDb =
+            apiCalls[0].status === 'fulfilled' ? apiCalls[0].value : [];
+        const igdbGames =
+            apiCalls[1].status === 'fulfilled' ? apiCalls[1].value : [];
+
+        const gamesSent = [...gamesInDb];
+        const gamesIgdb = igdbGames.map(
+            (game: { id: number; name: string }) => ({
+                igdbId: game.id,
+                name: game.name,
+            }),
+        );
+        gamesSent.push(...gamesIgdb);
+
+        const uniqueGames = [
+            ...new Set(
+                gamesSent.map((game) => ({
+                    igdbId: game.igdbId,
+                    name: game.name,
+                })),
+            ),
+        ];
+        console.log(uniqueGames);
+
+        if (uniqueGames.length === 0) {
+            return {
+                games: [],
+                message: `No games found with name ${gameName}.`,
+            };
+        }
+        return {
+            games: uniqueGames,
+            message: `Games found with name ${gameName}.`,
+        };
+    }
 }

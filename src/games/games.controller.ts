@@ -19,9 +19,28 @@ export class GamesController {
     // TODO: implement getGamesSuggestions
     @Get('/search')
     async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
-        return await this.gamesService.getGameSearchSuggestions(
-            queryParams.game_name,
-        );
+        console.log('game_name', queryParams.game_name);
+        const gameName = queryParams.game_name;
+
+        try {
+            const { games, message } =
+                await this.gamesService.getGameSearchSuggestions(gameName);
+            if (!games) {
+                throw new NotFoundException(
+                    message || `Game ${gameName} not found`,
+                );
+            }
+            return {
+                message,
+                games,
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            console.error('Error in getGamesSuggestions:', error);
+            throw new InternalServerErrorException('Error retrieving games');
+        }
     }
 
     // Route that handles single game view.
