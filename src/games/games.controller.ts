@@ -17,10 +17,12 @@ export class GamesController {
     // Route that handles search input autocompletion.
     // Uses queryParam "game_name" to search for games.
     // TODO: implement getGamesSuggestions
-    // @Get('/search')
-    // async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
-    //     return await this.gamesService.searchGames(queryParams.game_name);
-    // }
+    @Get('/search')
+    async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
+        return await this.gamesService.getGameSearchSuggestions(
+            queryParams.game_name,
+        );
+    }
 
     // Route that handles single game view.
     // Example: http://localhost:3000/games/expedition-33-clair-obscur
