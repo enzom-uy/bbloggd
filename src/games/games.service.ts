@@ -173,15 +173,12 @@ export class GamesService {
         );
         gamesSent.push(...gamesIgdb);
 
-        const uniqueGames = [
-            ...new Set(
-                gamesSent.map((game) => ({
-                    igdbId: game.igdbId,
-                    name: game.name,
-                })),
-            ),
-        ];
-        console.log(uniqueGames);
+        const gameMap = new Map();
+        gamesSent.forEach((game) => {
+            gameMap.set(game.igdbId, { igdbId: game.igdbId, name: game.name });
+        });
+
+        const uniqueGames = Array.from(gameMap.values());
 
         if (uniqueGames.length === 0) {
             return {
