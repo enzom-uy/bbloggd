@@ -155,14 +155,28 @@ export class GamesService {
             await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
                 body: `fields name,summary,cover,involved_companies, first_release_date,slug,genres;
-                        limit 6;
-                        where name ~ *"${gameName}"* & version_parent = null & parent_game = null & version_parent = null;`,
+                        limit 10;
+                        search "${gameName}";
+                        where version_parent = null & parent_game = null & version_parent = null;`,
             }).then((res) => res.json()),
         ]);
+
         const gamesInDb =
             apiCalls[0].status === 'fulfilled' ? apiCalls[0].value : [];
         const igdbGames =
             apiCalls[1].status === 'fulfilled' ? apiCalls[1].value : [];
+
+        if (igdbGames.length === 0) {
+            console.log('No games found with name, trying with name fallback');
+            const igdbNameFallback = await igdbFetch({
+                url: 'https://api.igdb.com/v4/games',
+                body: `fields name,summary,cover,involved_companies, first_release_date,slug,genres;
+                        limit 10;
+                        where name ~ *"${gameName}"* & version_parent = null & parent_game = null & version_parent = null;`,
+            }).then((res) => res.json());
+
+            igdbGames.push(...igdbNameFallback);
+        }
 
         const gamesSent = [...gamesInDb];
         const gamesIgdb = igdbGames.map(
