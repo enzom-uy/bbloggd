@@ -22,7 +22,6 @@ export class GameUtilsService {
     async getGameCoverUrl(coverId: string): Promise<string | null> {
         if (!coverId) return null;
 
-        console.log('Cover ID que llega al service utils: ', coverId);
         const response = await igdbFetch({
             url: 'https://api.igdb.com/v4/covers',
             body: `fields url;
@@ -53,7 +52,6 @@ export class GameUtilsService {
         companyId: string,
     ): Promise<{ name: string; developer: boolean | null } | null> {
         if (!companyId) return null;
-        console.log('Company ID que llega al service utils: ', companyId);
 
         const response = await igdbFetch({
             url: 'https://api.igdb.com/v4/involved_companies',
@@ -89,7 +87,6 @@ export class GameUtilsService {
                         });
                         const result =
                             (await fetchCompany.json()) as IGDBCompany[];
-                        console.log('RESULT!!!!!: ', result);
                         companyObject.name = result[0].name;
                         companyObject.developer = company.developer;
 

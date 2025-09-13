@@ -4,7 +4,6 @@ import {
     Injectable,
     UnauthorizedException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 
 interface CookieObject {
     [key: string]: string;
@@ -16,18 +15,15 @@ export class AuthGuard implements CanActivate {
         const req = context.switchToHttp().getRequest();
 
         const token = req.headers.authorization;
-        const cookies = req.cookies as CookieObject | undefined;
+        const cookies = req.cookies as CookieObject;
         const cookie = cookies?.['better-auth.session_token'];
-
-        console.log('Token desde el guard: ', token);
-        console.log('Cookie: ', cookie);
 
         const validateSessionResponse = await fetch(
             'http://localhost:4321/api/auth/validate-session',
             {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${cookie}`,
+                    Authorization: `Bearer ${token}`,
                     Cookie: `better-auth.session_token=${cookie}`,
                 },
             },
