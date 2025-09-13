@@ -6,20 +6,25 @@ import {
     Param,
     NotFoundException,
     InternalServerErrorException,
+    Req,
+    UnauthorizedException,
+    UseGuards,
 } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto';
+import { Response, Request } from 'express';
+import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('games')
+@UseGuards(AuthGuard)
 export class GamesController {
     constructor(private readonly gamesService: GamesService) {}
 
-    // Route that handles search input autocompletion.
-    // Uses queryParam "game_name" to search for games.
-    // TODO: implement getGamesSuggestions
     @Get('/search')
-    async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
-        console.log('game_name', queryParams.game_name);
+    async getGamesSuggestions(
+        @Query() queryParams: GetGameInfoDto,
+        @Req() req: Request,
+    ) {
         const gameName = queryParams.game_name;
 
         try {
@@ -43,8 +48,6 @@ export class GamesController {
         }
     }
 
-    // Route that handles single game view.
-    // Example: http://localhost:3000/games/expedition-33-clair-obscur
     @Get('/:id')
     async getGameById(
         @Param('id') gameId: string,
