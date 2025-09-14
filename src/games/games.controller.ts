@@ -8,15 +8,12 @@ import {
     InternalServerErrorException,
     Req,
     UnauthorizedException,
-    UseGuards,
 } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto';
 import { Response, Request } from 'express';
-import { AuthGuard } from 'src/auth/auth.guard';
 
 @Controller('games')
-@UseGuards(AuthGuard)
 export class GamesController {
     constructor(private readonly gamesService: GamesService) {}
 
@@ -26,6 +23,12 @@ export class GamesController {
         @Req() req: Request,
     ) {
         const gameName = queryParams.game_name;
+
+        if (gameName.trim().length < 2) {
+            throw new UnauthorizedException(
+                'Game name must be at least 2 characters long',
+            );
+        }
 
         try {
             const { games, message } =

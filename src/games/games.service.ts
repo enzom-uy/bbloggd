@@ -167,7 +167,9 @@ export class GamesService {
             apiCalls[1].status === 'fulfilled' ? apiCalls[1].value : [];
 
         if (igdbGames.length === 0) {
-            console.log('No games found with name, trying with name fallback');
+            console.log(
+                `No games found with name ${gameName}, trying with name fallback`,
+            );
             const igdbNameFallback = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
                 body: `fields name,summary,cover,involved_companies, first_release_date,slug,genres;

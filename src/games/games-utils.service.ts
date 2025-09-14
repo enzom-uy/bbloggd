@@ -10,8 +10,8 @@ import * as schema from '../../drizzle/schema';
 import { DateTime } from 'luxon';
 import { DATABASE_CONNECTION } from 'src/db/db.module';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { inArray } from 'drizzle-orm';
 
 @Injectable()
 export class GameUtilsService {
@@ -126,19 +126,21 @@ export class GameUtilsService {
                 target: [schema.genres.name, schema.genres.slug],
             });
 
-        const gameGenreValues = result
-            .map((g: IGDBGenre) => {
-                const genre = genreValues.find(
-                    (genre) => genre.slug === g.slug,
-                );
-                if (!genre?.id) return null;
-                return {
-                    id: randomUUID(),
-                    gameId: gameId,
-                    genreId: genre.id,
-                };
-            })
-            .filter((value) => value !== null);
+        const existingGenres = await this.db
+            .select({ id: schema.genres.id, slug: schema.genres.slug })
+            .from(schema.genres)
+            .where(
+                inArray(
+                    schema.genres.slug,
+                    result.map((g) => g.slug),
+                ),
+            );
+
+        const gameGenreValues = existingGenres.map((genre) => ({
+            id: randomUUID(),
+            gameId: gameId,
+            genreId: genre.id,
+        }));
 
         await this.db
             .insert(schema.gameGenres)
