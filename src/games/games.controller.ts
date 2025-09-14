@@ -8,6 +8,8 @@ import {
     InternalServerErrorException,
     Req,
     UnauthorizedException,
+    HttpStatus,
+    HttpException,
 } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto';
@@ -69,7 +71,10 @@ export class GamesController {
             };
         } catch (error) {
             if (error instanceof NotFoundException) {
-                throw error;
+                throw new HttpException(
+                    'Game not found.',
+                    HttpStatus.NOT_FOUND,
+                );
             }
             console.error('Error in getGameById:', error);
             throw new InternalServerErrorException('Error retrieving game');

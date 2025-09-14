@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE_CONNECTION } from 'src/db/db.module';
 import * as schema from '../../drizzle/schema';
-import { eq, ilike, sql } from 'drizzle-orm';
+import { eq, ilike } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { randomUUID } from 'crypto';
 import { GameUtilsService } from './games-utils.service';
@@ -54,7 +54,7 @@ export class GamesService {
     }
 
     async getGameById(gameId: string): Promise<{
-        game: schema.Game | null;
+        game: typeof schema.games.$inferSelect | null;
         message: string;
     }> {
         const gameInDb = await this.findGameInDatabase(gameId);
@@ -104,7 +104,7 @@ export class GamesService {
 
             // GET GAME GENRES
 
-            const gameObject: schema.NewGame = {
+            const gameObject: typeof schema.games.$inferInsert = {
                 id: gameDbId,
                 coverUrl,
                 description: igdbGame[0].summary,
@@ -128,6 +128,9 @@ export class GamesService {
                 igdbGame[0].genres,
                 gameDbId,
             );
+
+            await this.gameUtilsService.insertGameStats(gameObject.id);
+
             return {
                 game: insertedGame[0],
                 message: `Game with ID ${gameId} added to database.`,

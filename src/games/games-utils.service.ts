@@ -151,4 +151,30 @@ export class GameUtilsService {
 
         return;
     }
+
+    async insertGameStats(gameId: string) {
+        if (!gameId) return null;
+
+        console.log('Creating Game_Stats...');
+
+        const insertGameStats = await this.db
+            .insert(schema.gameStats)
+            .values({
+                gameId: gameId,
+                avgRating: 0,
+                reviewsCount: 0,
+                backlogCount: 0,
+                playingCount: 0,
+                playedCount: 0,
+                droppedCount: 0,
+            })
+            .onConflictDoNothing({
+                target: [schema.gameStats.gameId],
+            })
+            .returning();
+
+        console.log(insertGameStats);
+
+        return;
+    }
 }
