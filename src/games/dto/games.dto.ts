@@ -1,5 +1,5 @@
 import { IsString, MinLength } from 'class-validator';
-import { Game } from 'drizzle/schema';
+import { games } from 'drizzle/schema';
 
 export class GetGameInfoDto {
     @IsString({ message: 'Game name is not a valid string.' })
@@ -8,6 +8,6 @@ export class GetGameInfoDto {
 }
 
 export class GetGameByIdResponseDto {
-    game: Game;
+    game: typeof games.$inferSelect;
     message: string;
 }

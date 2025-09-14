@@ -6,11 +6,11 @@ import {
     bigint,
     numeric,
     timestamp,
-    text,
-    date,
     unique,
     boolean,
     integer,
+    text,
+    date,
     pgEnum,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -27,6 +27,7 @@ export const userGameStatus = pgEnum('user_game_status', [
     'played',
     'dropped',
 ]);
+export const userRole = pgEnum('user_role', ['user', 'supporter', 'admin']);
 
 export const howlongtobeatData = pgTable(
     'howlongtobeat_data',
@@ -76,49 +77,73 @@ export const howlongtobeatData = pgTable(
     ],
 );
 
-export const games = pgTable(
-    'games',
+export const verifications = pgTable('verifications', {
+    id: varchar({ length: 36 }).primaryKey().notNull(),
+    identifier: varchar({ length: 100 }).notNull(),
+    value: varchar({ length: 100 }).notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }),
+});
+
+export const accounts = pgTable(
+    'accounts',
     {
         id: varchar({ length: 36 }).primaryKey().notNull(),
-        title: varchar({ length: 255 }).notNull(),
-        description: text(),
-        slug: text().notNull(),
-        releaseDate: date('release_date'),
-        coverUrl: text('cover_url'),
-        developer: varchar({ length: 255 }),
-        publisher: varchar({ length: 255 }),
-        // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-        igdbId: bigint('igdb_id', { mode: 'number' }).notNull(),
+        userId: varchar('user_id', { length: 36 }).notNull(),
+        accountId: varchar('account_id', { length: 50 }).notNull(),
+        providerId: varchar('provider_id', { length: 50 }).notNull(),
+        accessToken: varchar('access_token', { length: 255 }),
+        refreshToken: varchar('refresh_token', { length: 255 }),
+        accessTokenExpiresAt: timestamp('access_token_expires_at', {
+            mode: 'string',
+        }),
+        refreshTokenExpiresAt: timestamp('refresh_token_expires_at', {
+            mode: 'string',
+        }),
+        scope: varchar({ length: 255 }),
+        idToken: varchar('id_token', { length: 255 }),
+        password: varchar({ length: 255 }),
         createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
         updatedAt: timestamp('updated_at', { mode: 'string' }),
     },
     (table) => [
-        index('idx_games_igdb_id').using(
+        index('idx_accounts_account_id').using(
             'btree',
-            table.igdbId.asc().nullsLast().op('int8_ops'),
+            table.accountId.asc().nullsLast().op('text_ops'),
         ),
-        index('idx_games_title').using(
+        index('idx_accounts_user_id').using(
             'btree',
-            table.title.asc().nullsLast().op('text_ops'),
+            table.userId.asc().nullsLast().op('text_ops'),
         ),
-        unique('games_slug_unique').on(table.slug),
-        unique('games_igdb_id_unique').on(table.igdbId),
+        foreignKey({
+            columns: [table.userId],
+            foreignColumns: [users.id],
+            name: 'accounts_user_id_fkey',
+        }).onDelete('cascade'),
+        unique('accounts_account_id_key').on(table.accountId),
     ],
 );
 
-export const genres = pgTable(
-    'genres',
+export const userSessions = pgTable(
+    'user_sessions',
     {
         id: varchar({ length: 36 }).primaryKey().notNull(),
-        name: varchar({ length: 50 }).notNull(),
-        slug: varchar({ length: 100 }).notNull(),
+        userId: varchar('user_id', { length: 36 }).notNull(),
+        token: varchar({ length: 255 }).notNull(),
+        expiresAt: timestamp('expires_at', { mode: 'string' }).notNull(),
+        ipAddress: varchar('ip_address', { length: 50 }),
+        userAgent: varchar('user_agent', { length: 255 }),
+        createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'string' }),
     },
     (table) => [
-        index('idx_genres_slug').using(
-            'btree',
-            table.slug.asc().nullsLast().op('text_ops'),
-        ),
-        unique('genres_name_slug_unique').on(table.name, table.slug),
+        foreignKey({
+            columns: [table.userId],
+            foreignColumns: [users.id],
+            name: 'user_sessions_user_id_fkey',
+        }).onDelete('cascade'),
+        unique('user_sessions_token_key').on(table.token),
     ],
 );
 
@@ -130,7 +155,6 @@ export const gameGenres = pgTable(
         genreId: varchar('genre_id', { length: 36 }).notNull(),
     },
     (table) => [
-        unique('game_genres_game_genre_unique').on(table.gameId, table.genreId),
         foreignKey({
             columns: [table.gameId],
             foreignColumns: [games.id],
@@ -141,6 +165,7 @@ export const gameGenres = pgTable(
             foreignColumns: [genres.id],
             name: 'game_genres_genre_id_fkey',
         }).onDelete('cascade'),
+        unique('game_genres_game_genre_unique').on(table.gameId, table.genreId),
     ],
 );
 
@@ -158,15 +183,15 @@ export const reviewLikes = pgTable(
             foreignColumns: [reviews.id],
             name: 'review_likes_review_id_fkey',
         }).onDelete('cascade'),
-        unique('review_likes_user_review_unique').on(
-            table.userId,
-            table.reviewId,
-        ),
         foreignKey({
             columns: [table.userId],
             foreignColumns: [users.id],
             name: 'review_likes_user_id_fkey',
         }).onDelete('cascade'),
+        unique('review_likes_user_review_unique').on(
+            table.reviewId,
+            table.userId,
+        ),
     ],
 );
 
@@ -221,7 +246,11 @@ export const gameStats = pgTable(
     'game_stats',
     {
         gameId: varchar('game_id', { length: 36 }).primaryKey().notNull(),
-        avgRating: numeric('avg_rating', { precision: 3, scale: 2 }),
+        avgRating: numeric('avg_rating', {
+            precision: 3,
+            scale: 2,
+            mode: 'number',
+        }),
         reviewsCount: integer('reviews_count'),
         backlogCount: integer('backlog_count'),
         playingCount: integer('playing_count'),
@@ -234,6 +263,36 @@ export const gameStats = pgTable(
             foreignColumns: [games.id],
             name: 'game_stats_game_id_fkey',
         }),
+    ],
+);
+
+export const games = pgTable(
+    'games',
+    {
+        id: varchar({ length: 36 }).primaryKey().notNull(),
+        title: varchar({ length: 255 }).notNull(),
+        description: text(),
+        releaseDate: date('release_date'),
+        coverUrl: text('cover_url'),
+        developer: varchar({ length: 255 }),
+        publisher: varchar({ length: 255 }),
+        // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+        igdbId: bigint('igdb_id', { mode: 'number' }).notNull(),
+        createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'string' }),
+        slug: text().notNull(),
+    },
+    (table) => [
+        index('idx_games_igdb_id').using(
+            'btree',
+            table.igdbId.asc().nullsLast().op('int8_ops'),
+        ),
+        index('idx_games_title').using(
+            'btree',
+            table.title.asc().nullsLast().op('text_ops'),
+        ),
+        unique('games_igdb_id_unique').on(table.igdbId),
+        unique('games_slug_unique').on(table.slug),
     ],
 );
 
@@ -297,7 +356,16 @@ export const reviews = pgTable(
         updatedAt: timestamp('updated_at', { mode: 'string' }),
     },
     (table) => [
-        unique('reviews_user_game_unique').on(table.userId, table.gameId),
+        index('idx_reviews_game_created').using(
+            'btree',
+            table.gameId.asc().nullsLast().op('text_ops'),
+            table.createdAt.desc().nullsLast().op('text_ops'),
+        ),
+        index('idx_reviews_user_rating').using(
+            'btree',
+            table.userId.asc().nullsLast().op('text_ops'),
+            table.rating.desc().nullsLast().op('numeric_ops'),
+        ),
         foreignKey({
             columns: [table.userId],
             foreignColumns: [users.id],
@@ -308,18 +376,7 @@ export const reviews = pgTable(
             foreignColumns: [games.id],
             name: 'reviews_game_id_fkey',
         }).onDelete('cascade'),
-
-        index('idx_reviews_game_created').using(
-            'btree',
-            table.gameId.asc(),
-            table.createdAt.desc(),
-        ),
-        // Índice compuesto para obtener reviews de un usuario ordenadas por rating
-        index('idx_reviews_user_rating').using(
-            'btree',
-            table.userId.asc(),
-            table.rating.desc(),
-        ),
+        unique('reviews_user_game_unique').on(table.userId, table.gameId),
     ],
 );
 
@@ -346,31 +403,6 @@ export const usersSocialLinks = pgTable(
     ],
 );
 
-export const collectionGames = pgTable(
-    'collection_games',
-    {
-        id: varchar({ length: 36 }).primaryKey().notNull(),
-        collectionId: varchar('collection_id', { length: 36 }).notNull(),
-        gameId: varchar('game_id', { length: 36 }).notNull(),
-    },
-    (table) => [
-        unique('collection_games_collection_game_unique').on(
-            table.collectionId,
-            table.gameId,
-        ),
-        foreignKey({
-            columns: [table.collectionId],
-            foreignColumns: [collections.id],
-            name: 'collection_games_collection_id_fkey',
-        }),
-        foreignKey({
-            columns: [table.gameId],
-            foreignColumns: [games.id],
-            name: 'collection_games_game_id_fkey',
-        }),
-    ],
-);
-
 export const users = pgTable(
     'users',
     {
@@ -385,6 +417,9 @@ export const users = pgTable(
             .defaultNow()
             .notNull(),
         updatedAt: timestamp('updated_at', { mode: 'string' }),
+        emailVerified: boolean('email_verified').default(false).notNull(),
+        role: userRole().notNull(),
+        displayUsername: varchar('display_username', { length: 50 }).notNull(),
     },
     (table) => [
         index('idx_users_email').using(
@@ -397,6 +432,48 @@ export const users = pgTable(
         ),
         unique('users_username_key').on(table.username),
         unique('users_email_key').on(table.email),
+        unique('users_steam_id_key').on(table.steamId),
+    ],
+);
+
+export const collectionGames = pgTable(
+    'collection_games',
+    {
+        id: varchar({ length: 36 }).primaryKey().notNull(),
+        collectionId: varchar('collection_id', { length: 36 }).notNull(),
+        gameId: varchar('game_id', { length: 36 }).notNull(),
+    },
+    (table) => [
+        foreignKey({
+            columns: [table.collectionId],
+            foreignColumns: [collections.id],
+            name: 'collection_games_collection_id_fkey',
+        }),
+        foreignKey({
+            columns: [table.gameId],
+            foreignColumns: [games.id],
+            name: 'collection_games_game_id_fkey',
+        }),
+        unique('collection_games_collection_game_unique').on(
+            table.collectionId,
+            table.gameId,
+        ),
+    ],
+);
+
+export const genres = pgTable(
+    'genres',
+    {
+        id: varchar({ length: 36 }).primaryKey().notNull(),
+        name: varchar({ length: 50 }).notNull(),
+        slug: varchar({ length: 100 }).notNull(),
+    },
+    (table) => [
+        index('idx_genres_slug').using(
+            'btree',
+            table.slug.asc().nullsLast().op('text_ops'),
+        ),
+        unique('genres_name_slug_unique').on(table.name, table.slug),
     ],
 );
 
@@ -420,7 +497,6 @@ export const userGames = pgTable(
             'btree',
             table.status.asc().nullsLast().op('enum_ops'),
         ),
-        unique('user_games_user_game_unique').on(table.userId, table.gameId),
         foreignKey({
             columns: [table.userId],
             foreignColumns: [users.id],
@@ -431,51 +507,6 @@ export const userGames = pgTable(
             foreignColumns: [games.id],
             name: 'user_games_game_id_fkey',
         }),
+        unique('user_games_user_game_unique').on(table.userId, table.gameId),
     ],
 );
-
-export type HowlongtobeatData = typeof howlongtobeatData.$inferSelect;
-export type NewHowlongtobeatData = typeof howlongtobeatData.$inferInsert;
-
-export type Game = typeof games.$inferSelect;
-export type NewGame = typeof games.$inferInsert;
-
-export type GameGenre = typeof gameGenres.$inferSelect;
-export type NewGameGenre = typeof gameGenres.$inferInsert;
-
-export type ReviewLike = typeof reviewLikes.$inferSelect;
-export type NewReviewLike = typeof reviewLikes.$inferInsert;
-
-export type Collection = typeof collections.$inferSelect;
-export type NewCollection = typeof collections.$inferInsert;
-
-export type GamePlatform = typeof gamePlatforms.$inferSelect;
-export type NewGamePlatform = typeof gamePlatforms.$inferInsert;
-
-export type GameStats = typeof gameStats.$inferSelect;
-export type NewGameStats = typeof gameStats.$inferInsert;
-
-export type UserActivity = typeof userActivity.$inferSelect;
-export type NewUserActivity = typeof userActivity.$inferInsert;
-
-export type Review = typeof reviews.$inferSelect;
-export type NewReview = typeof reviews.$inferInsert;
-
-export type UserSocialLink = typeof usersSocialLinks.$inferSelect;
-export type NewUserSocialLink = typeof usersSocialLinks.$inferInsert;
-
-export type CollectionGame = typeof collectionGames.$inferSelect;
-export type NewCollectionGame = typeof collectionGames.$inferInsert;
-
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
-export type UserGame = typeof userGames.$inferSelect;
-export type NewUserGame = typeof userGames.$inferInsert;
-
-export type Genre = typeof genres.$inferSelect;
-export type NewGenre = typeof genres.$inferInsert;
-
-// Enum types
-export type ActivityType = (typeof activityType.enumValues)[number];
-export type UserGameStatus = (typeof userGameStatus.enumValues)[number];

@@ -2,10 +2,13 @@ import { relations } from 'drizzle-orm/relations';
 import {
     games,
     howlongtobeatData,
+    users,
+    accounts,
+    userSessions,
     gameGenres,
+    genres,
     reviews,
     reviewLikes,
-    users,
     collections,
     gamePlatforms,
     gameStats,
@@ -30,11 +33,39 @@ export const gamesRelations = relations(games, ({ many }) => ({
     gameGenres: many(gameGenres),
     gamePlatforms: many(gamePlatforms),
     gameStats: many(gameStats),
-    userActivities: many(userActivity, {
+    userActivities_gameId: many(userActivity, {
         relationName: 'userActivity_gameId_games_id',
     }),
+    reviews: many(reviews),
     collectionGames: many(collectionGames),
     userGames: many(userGames),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+    user: one(users, {
+        fields: [accounts.userId],
+        references: [users.id],
+    }),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+    accounts: many(accounts),
+    userSessions: many(userSessions),
+    reviewLikes: many(reviewLikes),
+    collections: many(collections),
+    userActivities_userId: many(userActivity, {
+        relationName: 'userActivity_userId_users_id',
+    }),
+    reviews: many(reviews),
+    usersSocialLinks: many(usersSocialLinks),
+    userGames: many(userGames),
+}));
+
+export const userSessionsRelations = relations(userSessions, ({ one }) => ({
+    user: one(users, {
+        fields: [userSessions.userId],
+        references: [users.id],
+    }),
 }));
 
 export const gameGenresRelations = relations(gameGenres, ({ one }) => ({
@@ -42,6 +73,14 @@ export const gameGenresRelations = relations(gameGenres, ({ one }) => ({
         fields: [gameGenres.gameId],
         references: [games.id],
     }),
+    genre: one(genres, {
+        fields: [gameGenres.genreId],
+        references: [genres.id],
+    }),
+}));
+
+export const genresRelations = relations(genres, ({ many }) => ({
+    gameGenres: many(gameGenres),
 }));
 
 export const reviewLikesRelations = relations(reviewLikes, ({ one }) => ({
@@ -55,21 +94,19 @@ export const reviewLikesRelations = relations(reviewLikes, ({ one }) => ({
     }),
 }));
 
-export const reviewsRelations = relations(reviews, ({ many }) => ({
+export const reviewsRelations = relations(reviews, ({ one, many }) => ({
     reviewLikes: many(reviewLikes),
-    userActivities: many(userActivity, {
+    userActivities_reviewId: many(userActivity, {
         relationName: 'userActivity_reviewId_reviews_id',
     }),
-}));
-
-export const usersRelations = relations(users, ({ many }) => ({
-    reviewLikes: many(reviewLikes),
-    collections: many(collections),
-    userActivities: many(userActivity, {
-        relationName: 'userActivity_userId_users_id',
+    user: one(users, {
+        fields: [reviews.userId],
+        references: [users.id],
     }),
-    usersSocialLinks: many(usersSocialLinks),
-    userGames: many(userGames),
+    game: one(games, {
+        fields: [reviews.gameId],
+        references: [games.id],
+    }),
 }));
 
 export const collectionsRelations = relations(collections, ({ one, many }) => ({
@@ -95,17 +132,17 @@ export const gameStatsRelations = relations(gameStats, ({ one }) => ({
 }));
 
 export const userActivityRelations = relations(userActivity, ({ one }) => ({
-    game: one(games, {
+    game_gameId: one(games, {
         fields: [userActivity.gameId],
         references: [games.id],
         relationName: 'userActivity_gameId_games_id',
     }),
-    review: one(reviews, {
+    review_reviewId: one(reviews, {
         fields: [userActivity.reviewId],
         references: [reviews.id],
         relationName: 'userActivity_reviewId_reviews_id',
     }),
-    user: one(users, {
+    user_userId: one(users, {
         fields: [userActivity.userId],
         references: [users.id],
         relationName: 'userActivity_userId_users_id',
@@ -146,3 +183,4 @@ export const userGamesRelations = relations(userGames, ({ one }) => ({
         references: [games.id],
     }),
 }));
+
