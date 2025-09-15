@@ -1,29 +1,23 @@
 import {
     Controller,
     Get,
-    Body,
     Query,
     Param,
     NotFoundException,
     InternalServerErrorException,
-    Req,
     UnauthorizedException,
     HttpStatus,
     HttpException,
 } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto';
-import { Response, Request } from 'express';
 
 @Controller('games')
 export class GamesController {
     constructor(private readonly gamesService: GamesService) {}
 
     @Get('/search')
-    async getGamesSuggestions(
-        @Query() queryParams: GetGameInfoDto,
-        @Req() req: Request,
-    ) {
+    async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
         const gameName = queryParams.game_name;
 
         if (gameName.trim().length < 2) {
@@ -79,5 +73,13 @@ export class GamesController {
             console.error('Error in getGameById:', error);
             throw new InternalServerErrorException('Error retrieving game');
         }
+    }
+
+    // TODO: implement getGameHltbStats
+    @Get('/:id/hltb')
+    async getGameHltbStats(@Param('id') gameId: string) {
+        try {
+            // const something = await this.gamesService.getGameHltbStats()
+        } catch (error) {}
     }
 }
