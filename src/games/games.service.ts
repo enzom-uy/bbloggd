@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE_CONNECTION } from 'src/db/db.module';
 import * as schema from '../../drizzle/schema';
@@ -7,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { GameUtilsService } from './games-utils.service';
 import { igdbFetch } from 'src/utils/igdb.utils';
 import { IGDBGame } from './types/igdb.types';
+import { SCRAPER_URL } from 'src/utils/constants';
 
 @Injectable()
 export class GamesService {
@@ -209,5 +212,50 @@ export class GamesService {
             games: uniqueGames,
             message: `Games found with name ${gameName}.`,
         };
+    }
+
+    async getGameHltbStats({
+        gameName,
+        gameId,
+    }: {
+        gameName: string;
+        gameId: string;
+    }) {
+        const existsInDb = await this.db
+            .select()
+            .from(schema.howlongtobeatData)
+            .where(eq(schema.howlongtobeatData.gameId, gameId));
+
+        if (existsInDb.length > 0) {
+            console.log(
+                '[HLTB Endpoint] The game (heh) already exists in DB: ',
+                existsInDb,
+            );
+            return existsInDb[0];
+        }
+
+        const url = new URL(SCRAPER_URL as string);
+        url.searchParams.append('game_name', gameName);
+        url.searchParams.append('game_id', gameId);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': process.env.HLTB_API_KEY as string,
+            },
+        });
+        console.log('Response del scraper pre parse: ', response);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch HLTB stats');
+        }
+        const data =
+            (await response.json()) as typeof schema.howlongtobeatData.$inferSelect;
+
+        if (!data) {
+            throw new Error('No data found in HLTB stats');
+        }
+        console.log('Data del scraper parseado: ', data);
+        return data;
     }
 }

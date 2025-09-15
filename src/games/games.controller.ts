@@ -76,10 +76,45 @@ export class GamesController {
     }
 
     // TODO: implement getGameHltbStats
-    @Get('/:id/hltb')
-    async getGameHltbStats(@Param('id') gameId: string) {
+    @Get('/:igdbId/hltb')
+    async getGameHltbStats(@Param('igdbId') gameIgdbId: string) {
+        console.log(
+            '[HLTB Endpoint] Trying to fetch HLTB data for game: ',
+            gameIgdbId,
+        );
         try {
-            // const something = await this.gamesService.getGameHltbStats()
-        } catch (error) {}
+            const { game, message } =
+                await this.gamesService.getGameById(gameIgdbId);
+            if (!game) {
+                throw new NotFoundException(
+                    message || `Game with id ${gameIgdbId} not found`,
+                );
+            }
+
+            const hltbData = await this.gamesService.getGameHltbStats({
+                gameName: game.title,
+                gameId: game.id,
+            });
+
+            if (!hltbData) {
+                throw new NotFoundException('No HLTB data found for game');
+            }
+
+            console.log(
+                '[HLTB Endpoint] HLTB Data from controller: ',
+                hltbData,
+            );
+
+            return hltbData;
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw new HttpException(
+                    'Game not found.',
+                    HttpStatus.NOT_FOUND,
+                );
+            }
+            console.error('Error in getGameHltbStats:', error);
+            throw new InternalServerErrorException('Error retrieving game');
+        }
     }
 }
