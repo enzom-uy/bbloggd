@@ -258,4 +258,13 @@ export class GamesService {
         console.log('Data del scraper parseado: ', data);
         return data;
     }
+
+    async getGameStats(gameId: string) {
+        const gameStats = await this.db
+            .select()
+            .from(schema.gameStats)
+            .where(eq(schema.gameStats.gameId, gameId));
+        console.log('Game stats from db: ', gameStats);
+        return gameStats[0];
+    }
 }

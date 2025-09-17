@@ -47,9 +47,9 @@ export class GamesController {
         }
     }
 
-    @Get('/:id')
+    @Get('/:igdbId')
     async getGameById(
-        @Param('id') gameId: string,
+        @Param('igdbId') gameId: string,
     ): Promise<GetGameByIdResponseDto> {
         try {
             const { game, message } =
@@ -75,7 +75,41 @@ export class GamesController {
         }
     }
 
-    // TODO: implement getGameHltbStats
+    @Get('/:igdbId/stats')
+    async getGameStats(@Param('igdbId') gameIgdbId: string) {
+        console.log(
+            '[Stats Endpoint] Trying to fetch stats for game: ',
+            gameIgdbId,
+        );
+        try {
+            const game = await this.gamesService.getGameById(gameIgdbId);
+            if (!game.game) {
+                throw new NotFoundException(
+                    `Game with id ${gameIgdbId} not found`,
+                );
+            }
+            // TODO: implement getGameStats method
+            const stats = await this.gamesService.getGameStats(game.game.id);
+
+            if (!stats) {
+                throw new NotFoundException('No stats found for game');
+            }
+
+            console.log('[Stats Endpoint] Stats from controller: ', stats);
+
+            return stats;
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw new HttpException(
+                    'Game not found.',
+                    HttpStatus.NOT_FOUND,
+                );
+            }
+            console.error('Error in getGameStats:', error);
+            throw new InternalServerErrorException('Error retrieving game');
+        }
+    }
+
     @Get('/:igdbId/hltb')
     async getGameHltbStats(@Param('igdbId') gameIgdbId: string) {
         console.log(
