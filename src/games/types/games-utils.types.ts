@@ -12,6 +12,13 @@ export interface IGDBInvolvedCompany {
     company: number;
 }
 
+export interface IGDBPlatform {
+    id: number;
+    abbreviation: string;
+    name: string;
+    slug: string;
+}
+
 export interface IGDBCompany {
     id: number;
     name: string;

@@ -5,6 +5,7 @@ import {
     IGDBGenre,
     IGDBInvolvedCompany,
     IGDBCompany,
+    IGDBPlatform,
 } from './types/games-utils.types';
 import * as schema from '../../drizzle/schema';
 import { DateTime } from 'luxon';
@@ -161,7 +162,7 @@ export class GameUtilsService {
             .insert(schema.gameStats)
             .values({
                 gameId: gameId,
-                avgRating: 0,
+                avgRating: null,
                 reviewsCount: 0,
                 backlogCount: 0,
                 playingCount: 0,
@@ -176,5 +177,55 @@ export class GameUtilsService {
         console.log(insertGameStats);
 
         return;
+    }
+
+    async insertGamePlatforms(platforms: number[], gameId: string) {
+        if (!platforms?.length) return null;
+        console.log('getGamePlatforms triggered: ', platforms);
+
+        const platformsData = platforms.map(async (platformId) => {
+            const response = await igdbFetch({
+                url: 'https://api.igdb.com/v4/platforms',
+                body: `fields abbreviation,name,slug;
+                        where id = ${platformId};`,
+            });
+            const result = (await response.json()) as IGDBPlatform;
+            return result[0];
+        });
+
+        const platformsPromises = await Promise.all(platformsData);
+        console.log(
+            '[Get Game Platforms] platformsPromises: ',
+            platformsPromises,
+        );
+
+        const insertedPlatforms = await this.db
+            .insert(schema.platforms)
+            .values(
+                platformsPromises.map(
+                    (p: IGDBPlatform) =>
+                        ({
+                            id: randomUUID(),
+                            abbreviation: p.abbreviation ?? '',
+                            name: p.name,
+                            slug: p.slug,
+                        }) as typeof schema.platforms.$inferInsert,
+                ),
+            )
+            .onConflictDoNothing()
+            .returning();
+
+        await this.db.insert(schema.gamePlatforms).values(
+            insertedPlatforms.map(
+                (p) =>
+                    ({
+                        id: randomUUID(),
+                        gameId: gameId,
+                        platformId: p.id,
+                    }) as typeof schema.gamePlatforms.$inferInsert,
+            ),
+        );
+
+        return platformsPromises;
     }
 }

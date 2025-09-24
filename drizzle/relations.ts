@@ -11,6 +11,7 @@ import {
     reviewLikes,
     collections,
     gamePlatforms,
+    platforms,
     gameStats,
     userActivity,
     usersSocialLinks,
@@ -122,6 +123,14 @@ export const gamePlatformsRelations = relations(gamePlatforms, ({ one }) => ({
         fields: [gamePlatforms.gameId],
         references: [games.id],
     }),
+    platform: one(platforms, {
+        fields: [gamePlatforms.platformId],
+        references: [platforms.id],
+    }),
+}));
+
+export const platformsRelations = relations(platforms, ({ many }) => ({
+    gamePlatforms: many(gamePlatforms),
 }));
 
 export const gameStatsRelations = relations(gameStats, ({ one }) => ({

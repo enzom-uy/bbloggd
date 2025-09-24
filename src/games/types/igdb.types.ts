@@ -54,4 +54,5 @@ export interface IGDBGame {
     first_release_date: number;
     slug: string;
     genres: number[];
+    platforms: number[];
 }

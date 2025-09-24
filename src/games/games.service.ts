@@ -66,7 +66,7 @@ export class GamesService {
             // GET GAME DATA FROM IGDB
             const igdbResponse = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
-                body: `fields name,summary,release_dates,cover,involved_companies,first_release_date,slug,genres;
+                body: `fields name,summary,release_dates,cover,involved_companies,first_release_date,slug,genres,platforms;
                         limit 1;
                         where id =  ${gameId};`,
             });
@@ -127,12 +127,25 @@ export class GamesService {
                 .returning();
             console.log('insertGameToDb:', insertedGame[0]);
 
+            if (!insertedGame || insertedGame.length === 0) {
+                return {
+                    message:
+                        'There was a problem when trying to insert the game.',
+                    game: null,
+                };
+            }
+
             await this.gameUtilsService.insertGenres(
                 igdbGame[0].genres,
                 gameDbId,
             );
 
             await this.gameUtilsService.insertGameStats(gameObject.id);
+
+            await this.gameUtilsService.insertGamePlatforms(
+                igdbGame[0].platforms,
+                gameDbId,
+            );
 
             return {
                 game: insertedGame[0],

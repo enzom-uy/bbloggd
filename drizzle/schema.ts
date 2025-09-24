@@ -13,7 +13,6 @@ import {
     date,
     pgEnum,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
 export const activityType = pgEnum('activity_type', [
     'add_review',
@@ -73,7 +72,7 @@ export const howlongtobeatData = pgTable(
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'howlongtobeat_data_game_id_fkey',
-        }),
+        }).onDelete('cascade'),
     ],
 );
 
@@ -226,19 +225,19 @@ export const gamePlatforms = pgTable(
     {
         id: varchar({ length: 36 }).primaryKey().notNull(),
         gameId: varchar('game_id', { length: 36 }).notNull(),
-        platformName: varchar('platform_name', { length: 50 }).notNull(),
+        platformId: varchar('platform_id', { length: 50 }).notNull(),
     },
     (table) => [
-        index('idx_game_platforms_platform_name').using(
-            'btree',
-            table.platformName.asc().nullsLast().op('text_ops'),
-        ),
         foreignKey({
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'game_platforms_game_id_fkey',
         }),
-        unique('game_platforms_platform_name_key').on(table.platformName),
+        foreignKey({
+            columns: [table.platformId],
+            foreignColumns: [platforms.id],
+            name: 'game_platforms_platform_id_fkey',
+        }),
     ],
 );
 
@@ -246,11 +245,7 @@ export const gameStats = pgTable(
     'game_stats',
     {
         gameId: varchar('game_id', { length: 36 }).primaryKey().notNull(),
-        avgRating: numeric('avg_rating', {
-            precision: 3,
-            scale: 2,
-            mode: 'number',
-        }),
+        avgRating: numeric('avg_rating', { precision: 3, scale: 2 }),
         reviewsCount: integer('reviews_count'),
         backlogCount: integer('backlog_count'),
         playingCount: integer('playing_count'),
@@ -262,7 +257,7 @@ export const gameStats = pgTable(
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'game_stats_game_id_fkey',
-        }),
+        }).onDelete('cascade'),
     ],
 );
 
@@ -448,12 +443,12 @@ export const collectionGames = pgTable(
             columns: [table.collectionId],
             foreignColumns: [collections.id],
             name: 'collection_games_collection_id_fkey',
-        }),
+        }).onDelete('cascade'),
         foreignKey({
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'collection_games_game_id_fkey',
-        }),
+        }).onDelete('cascade'),
         unique('collection_games_collection_game_unique').on(
             table.collectionId,
             table.gameId,
@@ -474,6 +469,25 @@ export const genres = pgTable(
             table.slug.asc().nullsLast().op('text_ops'),
         ),
         unique('genres_name_slug_unique').on(table.name, table.slug),
+    ],
+);
+
+export const platforms = pgTable(
+    'platforms',
+    {
+        id: varchar({ length: 36 }).primaryKey().notNull(),
+        name: varchar({ length: 50 }).notNull(),
+        slug: varchar({ length: 100 }).notNull(),
+        abbreviation: varchar({ length: 20 }).notNull(),
+        createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+    },
+    (table) => [
+        index('idx_platforms_slug').using(
+            'btree',
+            table.slug.asc().nullsLast().op('text_ops'),
+        ),
+        unique('platforms_name_slug_unique').on(table.name, table.slug),
+        unique('platforms_abbreviation_unique').on(table.abbreviation),
     ],
 );
 
@@ -501,12 +515,12 @@ export const userGames = pgTable(
             columns: [table.userId],
             foreignColumns: [users.id],
             name: 'user_games_user_id_fkey',
-        }),
+        }).onDelete('cascade'),
         foreignKey({
             columns: [table.gameId],
             foreignColumns: [games.id],
             name: 'user_games_game_id_fkey',
-        }),
+        }).onDelete('cascade'),
         unique('user_games_user_game_unique').on(table.userId, table.gameId),
     ],
 );

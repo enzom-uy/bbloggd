@@ -7,8 +7,6 @@ import * as schema from '../../drizzle/schema';
 
 export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';
 
-console.log(process.env.DATABASE_URL);
-
 @Global()
 @Module({
     imports: [ConfigModule],
