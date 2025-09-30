@@ -8,9 +8,9 @@ import {
     UnauthorizedException,
     HttpStatus,
     HttpException,
-} from '@nestjs/common';
-import { GamesService } from './games.service';
-import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto';
+} from '@nestjs/common'
+import { GamesService } from './games.service'
+import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto'
 
 @Controller('games')
 export class GamesController {
@@ -18,32 +18,32 @@ export class GamesController {
 
     @Get('/search')
     async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
-        const gameName = queryParams.game_name;
+        const gameName = queryParams.game_name
 
         if (gameName.trim().length < 2) {
             throw new UnauthorizedException(
                 'Game name must be at least 2 characters long',
-            );
+            )
         }
 
         try {
             const { games, message } =
-                await this.gamesService.getGameSearchSuggestions(gameName);
+                await this.gamesService.getGameSearchSuggestions(gameName)
             if (!games) {
                 throw new NotFoundException(
                     message || `Game ${gameName} not found`,
-                );
+                )
             }
             return {
                 message,
                 games,
-            };
+            }
         } catch (error) {
             if (error instanceof NotFoundException) {
-                throw error;
+                throw error
             }
-            console.error('Error in getGamesSuggestions:', error);
-            throw new InternalServerErrorException('Error retrieving games');
+            console.error('Error in getGamesSuggestions:', error)
+            throw new InternalServerErrorException('Error retrieving games')
         }
     }
 
@@ -53,25 +53,22 @@ export class GamesController {
     ): Promise<GetGameByIdResponseDto> {
         try {
             const { game, message } =
-                await this.gamesService.getGameById(gameId);
+                await this.gamesService.getGameById(gameId)
             if (!game) {
                 throw new NotFoundException(
                     message || `Game with id ${gameId} not found`,
-                );
+                )
             }
             return {
                 message,
                 game,
-            };
+            }
         } catch (error) {
             if (error instanceof NotFoundException) {
-                throw new HttpException(
-                    'Game not found.',
-                    HttpStatus.NOT_FOUND,
-                );
+                throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
             }
-            console.error('Error in getGameById:', error);
-            throw new InternalServerErrorException('Error retrieving game');
+            console.error('Error in getGameById:', error)
+            throw new InternalServerErrorException('Error retrieving game')
         }
     }
 
@@ -80,33 +77,30 @@ export class GamesController {
         console.log(
             '[Stats Endpoint] Trying to fetch stats for game: ',
             gameIgdbId,
-        );
+        )
         try {
-            const game = await this.gamesService.getGameById(gameIgdbId);
+            const game = await this.gamesService.getGameById(gameIgdbId)
             if (!game.game) {
                 throw new NotFoundException(
                     `Game with id ${gameIgdbId} not found`,
-                );
+                )
             }
             // TODO: implement getGameStats method
-            const stats = await this.gamesService.getGameStats(game.game.id);
+            const stats = await this.gamesService.getGameStats(game.game.id)
 
             if (!stats) {
-                throw new NotFoundException('No stats found for game');
+                throw new NotFoundException('No stats found for game')
             }
 
-            console.log('[Stats Endpoint] Stats from controller: ', stats);
+            console.log('[Stats Endpoint] Stats from controller: ', stats)
 
-            return stats;
+            return stats
         } catch (error) {
             if (error instanceof NotFoundException) {
-                throw new HttpException(
-                    'Game not found.',
-                    HttpStatus.NOT_FOUND,
-                );
+                throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
             }
-            console.error('Error in getGameStats:', error);
-            throw new InternalServerErrorException('Error retrieving game');
+            console.error('Error in getGameStats:', error)
+            throw new InternalServerErrorException('Error retrieving game')
         }
     }
 
@@ -115,40 +109,70 @@ export class GamesController {
         console.log(
             '[HLTB Endpoint] Trying to fetch HLTB data for game: ',
             gameIgdbId,
-        );
+        )
         try {
             const { game, message } =
-                await this.gamesService.getGameById(gameIgdbId);
+                await this.gamesService.getGameById(gameIgdbId)
             if (!game) {
                 throw new NotFoundException(
                     message || `Game with id ${gameIgdbId} not found`,
-                );
+                )
             }
 
             const hltbData = await this.gamesService.getGameHltbStats({
                 gameName: game.title,
                 gameId: game.id,
-            });
+            })
 
             if (!hltbData) {
-                throw new NotFoundException('No HLTB data found for game');
+                throw new NotFoundException('No HLTB data found for game')
             }
 
-            console.log(
-                '[HLTB Endpoint] HLTB Data from controller: ',
-                hltbData,
-            );
+            console.log('[HLTB Endpoint] HLTB Data from controller: ', hltbData)
 
-            return hltbData;
+            return hltbData
         } catch (error) {
             if (error instanceof NotFoundException) {
-                throw new HttpException(
-                    'Game not found.',
-                    HttpStatus.NOT_FOUND,
-                );
+                throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
             }
-            console.error('Error in getGameHltbStats:', error);
-            throw new InternalServerErrorException('Error retrieving game');
+            console.error('Error in getGameHltbStats:', error)
+            throw new InternalServerErrorException('Error retrieving game')
         }
     }
+
+    // TODO: implement getGamePlatforms method
+    // @Get('/:igdbId/platforms')
+    // async getGamePlatforms(@Param('igdbId') gameIgdbId: string) {
+    //     console.log(
+    //         '[Platforms Endpoint] Trying to fetch platforms for game: ',
+    //         gameIgdbId,
+    //     )
+    //     try {
+    //         const { game, message } =
+    //             await this.gamesService.getGameById(gameIgdbId)
+    //         if (!game) {
+    //             throw new NotFoundException(
+    //                 message || `Game with id ${gameIgdbId} not found`,
+    //             )
+    //         }
+    //         const platforms = await this.gamesService.getGamePlatforms(game.id)
+    //
+    //         if (!platforms) {
+    //             throw new NotFoundException('No platforms found for game')
+    //         }
+    //
+    //         console.log(
+    //             '[Platforms Endpoint] Platforms from controller: ',
+    //             platforms,
+    //         )
+    //
+    //         return platforms
+    //     } catch (error) {
+    //         if (error instanceof NotFoundException) {
+    //             throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
+    //         }
+    //         console.error('Error in getGamePlatforms:', error)
+    //         throw new InternalServerErrorException('Error retrieving game')
+    //     }
+    // }
 }

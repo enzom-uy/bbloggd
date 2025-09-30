@@ -2,8 +2,8 @@ export const igdbFetch = async ({
     url,
     body,
 }: {
-    url: string;
-    body: string;
+    url: string
+    body: string
 }): Promise<Response> => {
     const response = await fetch(url, {
         method: 'POST',
@@ -12,7 +12,7 @@ export const igdbFetch = async ({
             'Client-ID': process.env.TWITCH_CLIENT_ID!,
             Authorization: `Bearer ${process.env.IGDB_ACCESS_TOKEN!}`,
         },
-    });
+    })
 
-    return response;
-};
+    return response
+}

@@ -1,131 +1,90 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { igdbFetch } from 'src/utils/igdb.utils';
-import {
-    GetCoverUrlResponse,
-    IGDBGenre,
-    IGDBInvolvedCompany,
-    IGDBCompany,
-    IGDBPlatform,
-} from './types/games-utils.types';
-import * as schema from '../../drizzle/schema';
-import { DateTime } from 'luxon';
-import { DATABASE_CONNECTION } from 'src/db/db.module';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { randomUUID } from 'crypto';
-import { inArray } from 'drizzle-orm';
+import { Inject, Injectable } from '@nestjs/common'
+import { igdbFetch } from 'src/utils/igdb.utils'
+import { GetCoverUrlResponse, IGDBGenre } from './types/games-utils.types'
+import * as schema from '../../drizzle/schema'
+import { DateTime } from 'luxon'
+import { DATABASE_CONNECTION } from 'src/db/db.module'
+import { NodePgDatabase } from 'drizzle-orm/node-postgres'
+import { randomUUID } from 'crypto'
+import { inArray } from 'drizzle-orm'
+import { GamePlatformsService } from './games-platforms.service'
+import { GamesCompaniesService } from './games-companies.service'
 
 @Injectable()
 export class GameUtilsService {
     constructor(
         @Inject(DATABASE_CONNECTION)
         private readonly db: NodePgDatabase<typeof schema>,
+        @Inject(GamePlatformsService)
+        private readonly gamePlatformsService: GamePlatformsService,
+        @Inject(GamesCompaniesService)
+        private readonly gameCompaniesService: GamesCompaniesService,
     ) {}
     async getGameCoverUrl(coverId: string): Promise<string | null> {
-        if (!coverId) return null;
+        if (!coverId) return null
 
         const response = await igdbFetch({
             url: 'https://api.igdb.com/v4/covers',
             body: `fields url;
                     limit 1;
                     where id = ${coverId};`,
-        });
+        })
 
         if (response.status !== 200) {
-            return response.statusText;
+            return response.statusText
         }
 
-        const result = (await response.json()) as GetCoverUrlResponse;
+        const result = (await response.json()) as GetCoverUrlResponse
 
-        if (result.length === 0) return null;
+        if (result.length === 0) return null
 
-        const formattedUrl = `https:${result[0].url.replace('t_thumb', `t_1080p`)}`;
-        return formattedUrl;
+        const formattedUrl = `https:${result[0].url.replace('t_thumb', `t_1080p`)}`
+        return formattedUrl
     }
 
-    getReleaseDate(igdbDate: number): string | null {
-        if (!igdbDate) return null;
+    getGameReleaseDate(igdbDate: number): string | null {
+        if (!igdbDate) return null
 
-        const parsedDate = DateTime.fromSeconds(igdbDate).toISO();
-        return parsedDate;
+        const parsedDate = DateTime.fromSeconds(igdbDate).toISO()
+        return parsedDate
     }
 
-    async getInvolvedCompanies(
+    async getGameInvolvedCompanies(
         companyId: string,
     ): Promise<{ name: string; developer: boolean | null } | null> {
-        if (!companyId) return null;
+        if (!companyId) return null
 
-        const response = await igdbFetch({
-            url: 'https://api.igdb.com/v4/involved_companies',
-            body: `limit 1;
-                    fields developer,publisher, company;
-                   where id = ${companyId} & supporting = false;`,
-        });
-
-        if (response.status !== 200) return null;
-
-        const getInvolvedCompaniesResult =
-            (await response.json()) as IGDBInvolvedCompany[];
-
-        if (getInvolvedCompaniesResult.length === 0) {
-            console.log('No involved_companies entity found');
-            return null;
-        }
-
-        const companyObject: { name: string; developer: boolean | null } = {
-            name: '',
-            developer: null,
-        };
-
-        const involvedCompaniesResult = (
-            await Promise.all(
-                getInvolvedCompaniesResult.map(
-                    async (company: IGDBInvolvedCompany) => {
-                        const fetchCompany = await igdbFetch({
-                            url: 'https://api.igdb.com/v4/companies',
-                            body: `limit 1;
-                                fields name;
-                                where id = ${company.company};`,
-                        });
-                        const result =
-                            (await fetchCompany.json()) as IGDBCompany[];
-                        companyObject.name = result[0].name;
-                        companyObject.developer = company.developer;
-
-                        return result;
-                    },
-                ),
-            )
-        ).flat();
-
-        return companyObject;
+        const company =
+            await this.gameCompaniesService.getGameInvolvedCompanies(companyId)
+        return company
     }
 
     async insertGenres(genreIds: number[], gameId: string) {
-        if (!genreIds) return null;
+        if (!genreIds) return null
 
         const response = await igdbFetch({
             url: 'https://api.igdb.com/v4/genres',
             body: `fields name, slug;
        where id = (${genreIds.join(',')});`,
-        });
+        })
 
-        if (response.status !== 200) return null;
-        const result = (await response.json()) as IGDBGenre[];
-        console.log(result);
-        if (result.length === 0) return null;
+        if (response.status !== 200) return null
+        const result = (await response.json()) as IGDBGenre[]
+        console.log(result)
+        if (result.length === 0) return null
 
         const genreValues = result.map((g: IGDBGenre) => ({
             id: randomUUID(),
             name: g.name,
             slug: g.slug,
-        }));
+        }))
 
         await this.db
             .insert(schema.genres)
             .values(genreValues)
             .onConflictDoNothing({
                 target: [schema.genres.name, schema.genres.slug],
-            });
+            })
 
         const existingGenres = await this.db
             .select({ id: schema.genres.id, slug: schema.genres.slug })
@@ -135,28 +94,28 @@ export class GameUtilsService {
                     schema.genres.slug,
                     result.map((g) => g.slug),
                 ),
-            );
+            )
 
         const gameGenreValues = existingGenres.map((genre) => ({
             id: randomUUID(),
             gameId: gameId,
             genreId: genre.id,
-        }));
+        }))
 
         await this.db
             .insert(schema.gameGenres)
             .values(gameGenreValues)
             .onConflictDoNothing({
                 target: [schema.gameGenres.gameId, schema.gameGenres.genreId],
-            });
+            })
 
-        return;
+        return
     }
 
     async insertGameStats(gameId: string) {
-        if (!gameId) return null;
+        if (!gameId) return null
 
-        console.log('Creating Game_Stats...');
+        console.log('Creating Game_Stats...')
 
         const insertGameStats = await this.db
             .insert(schema.gameStats)
@@ -172,60 +131,36 @@ export class GameUtilsService {
             .onConflictDoNothing({
                 target: [schema.gameStats.gameId],
             })
-            .returning();
+            .returning()
 
-        console.log(insertGameStats);
+        console.log(insertGameStats)
 
-        return;
+        return
     }
 
     async insertGamePlatforms(platforms: number[], gameId: string) {
-        if (!platforms?.length) return null;
-        console.log('getGamePlatforms triggered: ', platforms);
+        if (!platforms?.length) return null
+        console.log('getGamePlatforms triggered: ', platforms)
 
-        const platformsData = platforms.map(async (platformId) => {
-            const response = await igdbFetch({
-                url: 'https://api.igdb.com/v4/platforms',
-                body: `fields abbreviation,name,slug;
-                        where id = ${platformId};`,
-            });
-            const result = (await response.json()) as IGDBPlatform;
-            return result[0];
-        });
+        const platformsData =
+            this.gamePlatformsService.getIgdbPlatforms(platforms)
 
-        const platformsPromises = await Promise.all(platformsData);
+        const platformsPromises = await Promise.all(platformsData)
+
         console.log(
             '[Get Game Platforms] platformsPromises: ',
             platformsPromises,
-        );
+        )
 
-        const insertedPlatforms = await this.db
-            .insert(schema.platforms)
-            .values(
-                platformsPromises.map(
-                    (p: IGDBPlatform) =>
-                        ({
-                            id: randomUUID(),
-                            abbreviation: p.abbreviation ?? '',
-                            name: p.name,
-                            slug: p.slug,
-                        }) as typeof schema.platforms.$inferInsert,
-                ),
-            )
-            .onConflictDoNothing()
-            .returning();
+        const insertedPlatforms =
+            await this.gamePlatformsService.insertPlatforms(platformsPromises)
 
-        await this.db.insert(schema.gamePlatforms).values(
-            insertedPlatforms.map(
-                (p) =>
-                    ({
-                        id: randomUUID(),
-                        gameId: gameId,
-                        platformId: p.id,
-                    }) as typeof schema.gamePlatforms.$inferInsert,
-            ),
-        );
-
-        return platformsPromises;
+        await this.gamePlatformsService.insertGamePlatforms(
+            insertedPlatforms,
+            gameId,
+        )
     }
+
+    // TODO: implement getGamePlatforms method
+    async getGamePlatforms(gameId: number) {}
 }

@@ -1,36 +1,36 @@
 interface GetCoverUrlResponseBody {
-    id: string;
-    url: string;
+    id: string
+    url: string
 }
 
-export type GetCoverUrlResponse = GetCoverUrlResponseBody[] | [];
+export type GetCoverUrlResponse = GetCoverUrlResponseBody[] | []
 
 export interface IGDBInvolvedCompany {
-    id: number;
-    developer: boolean;
-    publisher: boolean;
-    company: number;
+    id: number
+    developer: boolean
+    publisher: boolean
+    company: number
 }
 
 export interface IGDBPlatform {
-    id: number;
-    abbreviation: string;
-    name: string;
-    slug: string;
+    id: number
+    abbreviation: string
+    name: string
+    slug: string
 }
 
 export interface IGDBCompany {
-    id: number;
-    name: string;
+    id: number
+    name: string
 }
 
 export interface IGDBReleaseDate {
-    id: number;
-    date: number;
+    id: number
+    date: number
 }
 
 export interface IGDBGenre {
-    id: number;
-    name: string;
-    slug: string;
+    id: number
+    name: string
+    slug: string
 }
