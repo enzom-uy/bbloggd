@@ -61,8 +61,11 @@ export class GamesService {
         message: string
     }> {
         const gameInDb = await this.findGameInDatabase(gameId)
+        console.log('gameInDb: ', gameInDb)
+        console.log('game id en el service: ', gameId)
 
         if (gameInDb.length === 0) {
+            console.log('gameInDb es vacío')
             // GET GAME DATA FROM IGDB
             const igdbResponse = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
@@ -71,6 +74,7 @@ export class GamesService {
                         where id =  ${gameId};`,
             })
             const igdbGame = (await igdbResponse.json()) as IGDBGame[]
+            console.log(igdbGame.length)
             const noIGDBGameFound = igdbGame.length < 1
 
             if (noIGDBGameFound) {
@@ -85,6 +89,8 @@ export class GamesService {
             const coverUrl = await this.gameUtilsService.getGameCoverUrl(
                 `${igdbGame[0].cover}`,
             )
+
+            console.log(coverUrl)
 
             if (!coverUrl) return { message: 'No cover found.', game: null }
 
@@ -102,8 +108,9 @@ export class GamesService {
                 igdbGame[0].first_release_date,
             )
 
-            if (!gameReleaseDate)
-                return { message: 'No release date found.', game: null }
+            console.log(igdbGame[0].first_release_date)
+
+            console.log('Game release date?: ', gameReleaseDate)
 
             const gameObject: typeof schema.games.$inferInsert = {
                 id: gameDbId,
@@ -112,9 +119,13 @@ export class GamesService {
                 slug: igdbGame[0].slug,
                 igdbId: igdbGame[0].id,
                 title: igdbGame[0].name,
-                developer: companiesData.developer,
-                publisher: companiesData.publisher,
-                releaseDate: gameReleaseDate,
+                developer: companiesData.developer
+                    ? companiesData.developer
+                    : null,
+                publisher: companiesData.publisher
+                    ? companiesData.publisher
+                    : null,
+                releaseDate: gameReleaseDate ? gameReleaseDate : null,
             }
 
             console.log('Final gameObject:', gameObject)

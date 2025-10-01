@@ -14,6 +14,7 @@ export class GamePlatformsService {
     ) {}
 
     getIgdbPlatforms(platforms: number[]) {
+        console.log('getIgdbPlatforms triggered: ', platforms)
         const platformsData = platforms.map(async (platformId) => {
             const response = await igdbFetch({
                 url: 'https://api.igdb.com/v4/platforms',
@@ -26,10 +27,15 @@ export class GamePlatformsService {
             const result = (await response.json()) as IGDBPlatform[]
             return result[0]
         })
+        console.log('This is platformsData: ', platformsData)
         return platformsData
     }
 
     async insertPlatforms(igdbPlatforms: IGDBPlatform[]) {
+        console.log(
+            'These are the platforms in insertPlatforms service: ',
+            igdbPlatforms,
+        )
         const insertedPlatforms = await this.db
             .insert(schema.platforms)
             .values(

@@ -52,6 +52,7 @@ export class GamesController {
         @Param('igdbId') gameId: string,
     ): Promise<GetGameByIdResponseDto> {
         try {
+            console.log('gameId: ', gameId)
             const { game, message } =
                 await this.gamesService.getGameById(gameId)
             if (!game) {
