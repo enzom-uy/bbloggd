@@ -159,6 +159,10 @@ export class GameUtilsService {
         const insertedPlatforms =
             await this.gamePlatformsService.insertPlatforms(platformsPromises)
 
+        if (insertedPlatforms.length === 0) {
+            return
+        }
+
         await this.gamePlatformsService.insertGamePlatforms(
             insertedPlatforms,
             gameId,
