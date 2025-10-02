@@ -5,6 +5,7 @@ import * as schema from 'drizzle/schema'
 import { igdbFetch } from 'src/utils/igdb.utils'
 import { IGDBPlatform } from './types/games-utils.types'
 import { randomUUID } from 'crypto'
+import { eq, inArray } from 'drizzle-orm'
 
 @Injectable()
 export class GamePlatformsService {
@@ -14,7 +15,6 @@ export class GamePlatformsService {
     ) {}
 
     getIgdbPlatforms(platforms: number[]) {
-        console.log('getIgdbPlatforms triggered: ', platforms)
         const platformsData = platforms.map(async (platformId) => {
             const response = await igdbFetch({
                 url: 'https://api.igdb.com/v4/platforms',
@@ -27,15 +27,10 @@ export class GamePlatformsService {
             const result = (await response.json()) as IGDBPlatform[]
             return result[0]
         })
-        console.log('This is platformsData: ', platformsData)
         return platformsData
     }
 
     async insertPlatforms(igdbPlatforms: IGDBPlatform[]) {
-        console.log(
-            'These are the platforms in insertPlatforms service: ',
-            igdbPlatforms,
-        )
         const insertedPlatforms = await this.db
             .insert(schema.platforms)
             .values(
@@ -57,6 +52,7 @@ export class GamePlatformsService {
     async insertGamePlatforms(
         insertedPlatforms: (typeof schema.platforms.$inferSelect)[],
         gameId: string,
+        igdbId: number,
     ) {
         await this.db.insert(schema.gamePlatforms).values(
             insertedPlatforms.map(
@@ -65,8 +61,44 @@ export class GamePlatformsService {
                         id: randomUUID(),
                         gameId: gameId,
                         platformId: p.id,
+                        igdbId,
                     }) as typeof schema.gamePlatforms.$inferInsert,
             ),
         )
+    }
+
+    async getGamePlatforms(igdbId: number, abbreviated: boolean) {
+        const gamePlatforms = await this.db
+            .select()
+            .from(schema.gamePlatforms)
+            .where(eq(schema.gamePlatforms.igdbId, igdbId))
+        console.log('Abbreviated?: ', abbreviated)
+
+        const platformsData = await this.db
+            .select(
+                abbreviated
+                    ? {
+                          id: schema.platforms.id,
+                          slug: schema.platforms.slug,
+                          abbreviation: schema.platforms.abbreviation,
+                      }
+                    : {
+                          id: schema.platforms.id,
+                          slug: schema.platforms.slug,
+                          name: schema.platforms.name,
+                      },
+            )
+            .from(schema.platforms)
+            .where(
+                inArray(
+                    schema.platforms.id,
+                    gamePlatforms.map((gp) => gp.platformId),
+                ),
+            )
+
+        console.log('gamePlatforms: ', gamePlatforms)
+        console.log('platformsData: ', platformsData)
+
+        return platformsData
     }
 }

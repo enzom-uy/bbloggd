@@ -154,6 +154,7 @@ export class GamesService {
             await this.gameUtilsService.insertGamePlatforms(
                 igdbGame[0].platforms,
                 gameDbId,
+                igdbGame[0].id,
             )
 
             return {

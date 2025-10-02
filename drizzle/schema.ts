@@ -137,6 +137,7 @@ export const gamePlatforms = pgTable("game_platforms", {
 	id: varchar({ length: 36 }).primaryKey().notNull(),
 	gameId: varchar("game_id", { length: 36 }).notNull(),
 	platformId: varchar("platform_id", { length: 50 }).notNull(),
+    igdbId: integer("igdb_id").notNull()
 }, (table) => [
 	foreignKey({
 			columns: [table.gameId],

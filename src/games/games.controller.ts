@@ -10,11 +10,19 @@ import {
     HttpException,
 } from '@nestjs/common'
 import { GamesService } from './games.service'
-import { GetGameByIdResponseDto, GetGameInfoDto } from './dto/games.dto'
+import {
+    GetGameByIdResponseDto,
+    GetGameInfoDto,
+    GetGamePlatformsQueryParams,
+} from './dto/games.dto'
+import { GamePlatformsService } from './games-platforms.service'
 
 @Controller('games')
 export class GamesController {
-    constructor(private readonly gamesService: GamesService) {}
+    constructor(
+        private readonly gamesService: GamesService,
+        private readonly gamePlatformsService: GamePlatformsService,
+    ) {}
 
     @Get('/search')
     async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
@@ -129,51 +137,44 @@ export class GamesController {
                 throw new NotFoundException('No HLTB data found for game')
             }
 
-            console.log('[HLTB Endpoint] HLTB Data from controller: ', hltbData)
-
             return hltbData
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
             }
-            console.error('Error in getGameHltbStats:', error)
             throw new InternalServerErrorException('Error retrieving game')
         }
     }
 
     // TODO: implement getGamePlatforms method
-    // @Get('/:igdbId/platforms')
-    // async getGamePlatforms(@Param('igdbId') gameIgdbId: string) {
-    //     console.log(
-    //         '[Platforms Endpoint] Trying to fetch platforms for game: ',
-    //         gameIgdbId,
-    //     )
-    //     try {
-    //         const { game, message } =
-    //             await this.gamesService.getGameById(gameIgdbId)
-    //         if (!game) {
-    //             throw new NotFoundException(
-    //                 message || `Game with id ${gameIgdbId} not found`,
-    //             )
-    //         }
-    //         const platforms = await this.gamesService.getGamePlatforms(game.id)
-    //
-    //         if (!platforms) {
-    //             throw new NotFoundException('No platforms found for game')
-    //         }
-    //
-    //         console.log(
-    //             '[Platforms Endpoint] Platforms from controller: ',
-    //             platforms,
-    //         )
-    //
-    //         return platforms
-    //     } catch (error) {
-    //         if (error instanceof NotFoundException) {
-    //             throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
-    //         }
-    //         console.error('Error in getGamePlatforms:', error)
-    //         throw new InternalServerErrorException('Error retrieving game')
-    //     }
-    // }
+    @Get('/:igdbId/platforms')
+    async getGamePlatforms(
+        @Param('igdbId') gameIgdbId: string,
+        @Query() queryParams: GetGamePlatformsQueryParams,
+    ) {
+        console.log('Abbreviated from controller: ', queryParams)
+        try {
+            const platforms = await this.gamePlatformsService.getGamePlatforms(
+                Number(gameIgdbId),
+                queryParams.abbreviated ?? false,
+            )
+
+            if (!platforms) {
+                throw new NotFoundException('No platforms found for game')
+            }
+
+            console.log(
+                '[Platforms Endpoint] Platforms from controller: ',
+                platforms,
+            )
+
+            return platforms
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
+            }
+            console.error('Error in getGamePlatforms:', error)
+            throw new InternalServerErrorException('Error retrieving game')
+        }
+    }
 }

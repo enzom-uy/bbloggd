@@ -138,23 +138,19 @@ export class GameUtilsService {
         return
     }
 
-    async insertGamePlatforms(platforms: number[], gameId: string) {
+    async insertGamePlatforms(
+        platforms: number[],
+        gameId: string,
+        igdbId: number,
+    ) {
         if (!platforms || platforms.length === 0) {
-            console.log('No platforms found for game: ', gameId)
             return null
         }
-        console.log('getGamePlatforms triggered: ', platforms)
 
         const platformsData =
             this.gamePlatformsService.getIgdbPlatforms(platforms)
 
         const platformsPromises = await Promise.all(platformsData)
-        console.log('This are the promises supposed: ', platformsPromises)
-
-        console.log(
-            '[Get Game Platforms] platformsPromises: ',
-            platformsPromises,
-        )
 
         const insertedPlatforms =
             await this.gamePlatformsService.insertPlatforms(platformsPromises)
@@ -166,9 +162,7 @@ export class GameUtilsService {
         await this.gamePlatformsService.insertGamePlatforms(
             insertedPlatforms,
             gameId,
+            igdbId,
         )
     }
-
-    // TODO: implement getGamePlatforms method
-    async getGamePlatforms(gameId: number) {}
 }
