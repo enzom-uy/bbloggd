@@ -4,7 +4,6 @@ import { UserModule } from './user/user.module'
 import { GamesModule } from './games/games.module'
 import { DbModule } from './db/db.module'
 import { ThrottlerModule } from '@nestjs/throttler'
-import { AuthModule } from './auth/auth.module'
 
 @Module({
     imports: [
@@ -22,7 +21,6 @@ import { AuthModule } from './auth/auth.module'
         UserModule,
         GamesModule,
         DbModule,
-        AuthModule,
     ],
     controllers: [],
     providers: [],

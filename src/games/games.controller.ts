@@ -94,7 +94,6 @@ export class GamesController {
                     `Game with id ${gameIgdbId} not found`,
                 )
             }
-            // TODO: implement getGameStats method
             const stats = await this.gamesService.getGameStats(game.game.id)
 
             if (!stats) {
@@ -146,7 +145,6 @@ export class GamesController {
         }
     }
 
-    // TODO: implement getGamePlatforms method
     @Get('/:igdbId/platforms')
     async getGamePlatforms(
         @Param('igdbId') gameIgdbId: string,
