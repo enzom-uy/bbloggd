@@ -16,7 +16,6 @@ export class GetGamePlatformsQueryParams {
     @IsOptional()
     @IsBoolean()
     @Transform(({ value }) => {
-        console.log('Transform received value:', value, 'type:', typeof value)
         if (value === 'true') return true
         if (value === 'false') return false
         return undefined

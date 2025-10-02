@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto'
 import { inArray } from 'drizzle-orm'
 import { GamePlatformsService } from './games-platforms.service'
 import { GamesCompaniesService } from './games-companies.service'
+import { PinoLogger } from 'nestjs-pino'
 
 @Injectable()
 export class GameUtilsService {
@@ -19,7 +20,10 @@ export class GameUtilsService {
         private readonly gamePlatformsService: GamePlatformsService,
         @Inject(GamesCompaniesService)
         private readonly gameCompaniesService: GamesCompaniesService,
-    ) {}
+        private readonly logger: PinoLogger,
+    ) {
+        this.logger.setContext(GameUtilsService.name)
+    }
     async getGameCoverUrl(coverId: string): Promise<string | null> {
         if (!coverId) return null
 
@@ -70,7 +74,7 @@ export class GameUtilsService {
 
         if (response.status !== 200) return null
         const result = (await response.json()) as IGDBGenre[]
-        console.log(result)
+        this.logger.info({ result }, 'Genres fetched from IGDB')
         if (result.length === 0) return null
 
         const genreValues = result.map((g: IGDBGenre) => ({
@@ -115,7 +119,7 @@ export class GameUtilsService {
     async insertGameStats(gameId: string) {
         if (!gameId) return null
 
-        console.log('Creating Game_Stats...')
+        this.logger.info({ gameId }, 'Creating game stats')
 
         const insertGameStats = await this.db
             .insert(schema.gameStats)
@@ -133,7 +137,7 @@ export class GameUtilsService {
             })
             .returning()
 
-        console.log(insertGameStats)
+        this.logger.info({ insertGameStats }, 'Game stats created')
 
         return
     }

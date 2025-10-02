@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import { igdbFetch } from 'src/utils/igdb.utils'
 import { IGDBCompany, IGDBInvolvedCompany } from './types/games-utils.types'
+import { PinoLogger } from 'nestjs-pino'
 
 @Injectable()
 export class GamesCompaniesService {
-    constructor() {}
+    constructor(private readonly logger: PinoLogger) {
+        this.logger.setContext(GamesCompaniesService.name)
+    }
 
     async getGameInvolvedCompanies(companyId: string) {
         const response = await igdbFetch({
@@ -20,7 +23,7 @@ export class GamesCompaniesService {
             (await response.json()) as IGDBInvolvedCompany[]
 
         if (getInvolvedCompaniesResult.length === 0) {
-            console.log('No involved_companies entity found')
+            this.logger.info('No involved_companies entity found')
             return null
         }
 
@@ -29,26 +32,23 @@ export class GamesCompaniesService {
             developer: null,
         }
 
-        const involvedCompaniesResult = (
-            await Promise.all(
-                getInvolvedCompaniesResult.map(
-                    async (company: IGDBInvolvedCompany) => {
-                        const fetchCompany = await igdbFetch({
-                            url: 'https://api.igdb.com/v4/companies',
-                            body: `limit 1;
+        await Promise.all(
+            getInvolvedCompaniesResult.map(
+                async (company: IGDBInvolvedCompany) => {
+                    const fetchCompany = await igdbFetch({
+                        url: 'https://api.igdb.com/v4/companies',
+                        body: `limit 1;
                                 fields name;
                                 where id = ${company.company};`,
-                        })
-                        const result =
-                            (await fetchCompany.json()) as IGDBCompany[]
-                        companyObject.name = result[0].name
-                        companyObject.developer = company.developer
+                    })
+                    const result = (await fetchCompany.json()) as IGDBCompany[]
+                    companyObject.name = result[0].name
+                    companyObject.developer = company.developer
 
-                        return result
-                    },
-                ),
-            )
-        ).flat()
+                    return result
+                },
+            ),
+        )
         return companyObject
     }
 }

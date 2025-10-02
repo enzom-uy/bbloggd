@@ -6,13 +6,17 @@ import { igdbFetch } from 'src/utils/igdb.utils'
 import { IGDBPlatform } from './types/games-utils.types'
 import { randomUUID } from 'crypto'
 import { eq, inArray } from 'drizzle-orm'
+import { PinoLogger } from 'nestjs-pino'
 
 @Injectable()
 export class GamePlatformsService {
     constructor(
         @Inject(DATABASE_CONNECTION)
         private readonly db: NodePgDatabase<typeof schema>,
-    ) {}
+        private readonly logger: PinoLogger,
+    ) {
+        this.logger.setContext(GamePlatformsService.name)
+    }
 
     getIgdbPlatforms(platforms: number[]) {
         const platformsData = platforms.map(async (platformId) => {
@@ -72,7 +76,7 @@ export class GamePlatformsService {
             .select()
             .from(schema.gamePlatforms)
             .where(eq(schema.gamePlatforms.igdbId, igdbId))
-        console.log('Abbreviated?: ', abbreviated)
+        this.logger.info({ abbreviated }, 'Get game platforms request')
 
         const platformsData = await this.db
             .select(
@@ -96,8 +100,10 @@ export class GamePlatformsService {
                 ),
             )
 
-        console.log('gamePlatforms: ', gamePlatforms)
-        console.log('platformsData: ', platformsData)
+        this.logger.info(
+            { gamePlatforms, platformsData },
+            'Game platforms fetched',
+        )
 
         return platformsData
     }

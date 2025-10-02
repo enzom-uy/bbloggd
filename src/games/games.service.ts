@@ -10,6 +10,7 @@ import { GameUtilsService } from './games-utils.service'
 import { igdbFetch } from 'src/utils/igdb.utils'
 import { IGDBGame } from './types/igdb.types'
 import { SCRAPER_URL } from 'src/utils/constants'
+import { PinoLogger } from 'nestjs-pino'
 
 @Injectable()
 export class GamesService {
@@ -17,7 +18,10 @@ export class GamesService {
         @Inject(DATABASE_CONNECTION)
         private readonly db: NodePgDatabase<typeof schema>,
         private readonly gameUtilsService: GameUtilsService,
-    ) {}
+        private readonly logger: PinoLogger,
+    ) {
+        this.logger.setContext(GamesService.name)
+    }
 
     private readonly gamesTable = schema.games
 
@@ -61,11 +65,10 @@ export class GamesService {
         message: string
     }> {
         const gameInDb = await this.findGameInDatabase(gameId)
-        console.log('gameInDb: ', gameInDb)
-        console.log('game id en el service: ', gameId)
+        this.logger.info({ gameInDb, gameId }, 'Game in database')
 
         if (gameInDb.length === 0) {
-            console.log('gameInDb es vacío')
+            this.logger.info('Game not found in database, fetching from IGDB')
             // GET GAME DATA FROM IGDB
             const igdbResponse = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
@@ -74,7 +77,10 @@ export class GamesService {
                         where id =  ${gameId};`,
             })
             const igdbGame = (await igdbResponse.json()) as IGDBGame[]
-            console.log(igdbGame.length)
+            this.logger.info(
+                { igdbGameCount: igdbGame.length },
+                'IGDB games fetched',
+            )
             const noIGDBGameFound = igdbGame.length < 1
 
             if (noIGDBGameFound) {
@@ -90,7 +96,7 @@ export class GamesService {
                 `${igdbGame[0].cover}`,
             )
 
-            console.log(coverUrl)
+            this.logger.info({ coverUrl }, 'Cover URL fetched')
 
             if (!coverUrl) return { message: 'No cover found.', game: null }
 
@@ -108,9 +114,13 @@ export class GamesService {
                 igdbGame[0].first_release_date,
             )
 
-            console.log(igdbGame[0].first_release_date)
-
-            console.log('Game release date?: ', gameReleaseDate)
+            this.logger.info(
+                {
+                    firstReleaseDate: igdbGame[0].first_release_date,
+                    gameReleaseDate,
+                },
+                'Game release date parsed',
+            )
 
             const gameObject: typeof schema.games.$inferInsert = {
                 id: gameDbId,
@@ -128,13 +138,16 @@ export class GamesService {
                 releaseDate: gameReleaseDate ? gameReleaseDate : null,
             }
 
-            console.log('Final gameObject:', gameObject)
+            this.logger.info({ gameObject }, 'Final game object created')
 
             const insertedGame = await this.db
                 .insert(this.gamesTable)
                 .values(gameObject)
                 .returning()
-            console.log('insertGameToDb:', insertedGame[0])
+            this.logger.info(
+                { insertedGame: insertedGame[0] },
+                'Game inserted to database',
+            )
 
             if (!insertedGame || insertedGame.length === 0) {
                 return {
@@ -196,8 +209,9 @@ export class GamesService {
             apiCalls[1].status === 'fulfilled' ? apiCalls[1].value : []
 
         if (igdbGames.length === 0) {
-            console.log(
-                `No games found with name ${gameName}, trying with name fallback`,
+            this.logger.info(
+                { gameName },
+                'No games found with search, trying with name fallback',
             )
             const igdbNameFallback = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
@@ -253,9 +267,9 @@ export class GamesService {
             .where(eq(schema.howlongtobeatData.gameId, gameId))
 
         if (existsInDb.length > 0) {
-            console.log(
-                '[HLTB Endpoint] The game (heh) already exists in DB: ',
-                existsInDb,
+            this.logger.info(
+                { existsInDb },
+                'HLTB data already exists in database',
             )
             return existsInDb[0]
         }
@@ -270,7 +284,10 @@ export class GamesService {
                 'X-API-Key': process.env.HLTB_API_KEY as string,
             },
         })
-        console.log('Response del scraper pre parse: ', response)
+        this.logger.info(
+            { responseStatus: response.status },
+            'HLTB scraper response',
+        )
 
         if (!response.ok) {
             throw new Error('Failed to fetch HLTB stats')
@@ -281,7 +298,7 @@ export class GamesService {
         if (!data) {
             throw new Error('No data found in HLTB stats')
         }
-        console.log('Data del scraper parseado: ', data)
+        this.logger.info({ data }, 'HLTB data parsed')
         return data
     }
 
