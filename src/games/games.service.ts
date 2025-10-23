@@ -3,7 +3,7 @@ import 'dotenv/config'
 import { Inject, Injectable } from '@nestjs/common'
 import { DATABASE_CONNECTION } from 'src/db/db.module'
 import * as schema from '../../drizzle/schema'
-import { eq, ilike } from 'drizzle-orm'
+import { desc, eq, ilike, sql } from 'drizzle-orm'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { randomUUID } from 'crypto'
 import { GameUtilsService } from './games-utils.service'
@@ -65,6 +65,7 @@ export class GamesService {
         message: string
     }> {
         const gameInDb = await this.findGameInDatabase(gameId)
+
         this.logger.info({ gameInDb, gameId }, 'Game in database')
 
         if (gameInDb.length === 0) {

@@ -27,10 +27,11 @@ export class GamesController {
     ) {
         this.logger.setContext(GamesController.name)
     }
-
+    // Search bar feature
     @Get('/search')
     async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
         const gameName = queryParams.game_name
+        this.logger.info({ gameName }, 'Game name from query params')
 
         if (gameName.trim().length < 2) {
             throw new UnauthorizedException(
