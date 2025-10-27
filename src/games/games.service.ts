@@ -3,7 +3,7 @@ import 'dotenv/config'
 import { Inject, Injectable } from '@nestjs/common'
 import { DATABASE_CONNECTION } from 'src/db/db.module'
 import * as schema from '../../drizzle/schema'
-import { desc, eq, ilike, sql } from 'drizzle-orm'
+import { desc, eq, ilike, inArray, sql } from 'drizzle-orm'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { randomUUID } from 'crypto'
 import { GameUtilsService } from './games-utils.service'
@@ -214,6 +214,7 @@ export class GamesService {
                 { gameName },
                 'No games found with search, trying with name fallback',
             )
+
             const igdbNameFallback = await igdbFetch({
                 url: 'https://api.igdb.com/v4/games',
                 body: `fields name,summary,cover,involved_companies, first_release_date,slug,genres;
@@ -225,12 +226,14 @@ export class GamesService {
         }
 
         const gamesSent = [...gamesInDb]
+
         const gamesIgdb = igdbGames.map(
             (game: { id: number; name: string }) => ({
                 igdbId: game.id,
                 name: game.name,
             }),
         )
+
         gamesSent.push(...gamesIgdb)
 
         const gameMap = new Map()
@@ -309,5 +312,37 @@ export class GamesService {
             .from(schema.gameStats)
             .where(eq(schema.gameStats.gameId, gameId))
         return gameStats[0]
+    }
+
+    async getGameGenres(gameIgdbId: string) {
+        if (!gameIgdbId) return null
+
+        const gameGenres = await this.db
+            .select()
+            .from(schema.gameGenres)
+            .where(eq(schema.gameGenres.gameId, gameIgdbId))
+        console.log(gameGenres)
+
+        if (!gameGenres) {
+            this.logger.error({}, "No game's genres found")
+            return null
+        }
+
+        const genres = await this.db
+            .select()
+            .from(schema.genres)
+            .where(
+                inArray(
+                    schema.genres.id,
+                    gameGenres.map((gr) => gr.genreId),
+                ),
+            )
+
+        if (!genres) {
+            this.logger.error({}, 'No genres found')
+            return null
+        }
+
+        return genres
     }
 }

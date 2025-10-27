@@ -12,6 +12,7 @@ import {
 import { GamesService } from './games.service'
 import {
     GetGameByIdResponseDto,
+    GetGameGenresQueryParams,
     GetGameInfoDto,
     GetGamePlatformsQueryParams,
 } from './dto/games.dto'
@@ -27,7 +28,6 @@ export class GamesController {
     ) {
         this.logger.setContext(GamesController.name)
     }
-    // Search bar feature
     @Get('/search')
     async getGamesSuggestions(@Query() queryParams: GetGameInfoDto) {
         const gameName = queryParams.game_name
@@ -168,7 +168,31 @@ export class GamesController {
                 throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
             }
             this.logger.error({ error }, 'Error in getGamePlatforms:')
-            throw new InternalServerErrorException('Error retrieving game')
+            throw new InternalServerErrorException(error)
+        }
+    }
+
+    @Get('/:igdbId/genres')
+    async getGameGenres(
+        @Param('igdbId') gameIgdbId: string,
+        @Query() queryParams: GetGameGenresQueryParams,
+    ) {
+        this.logger.info({ gameIgdbId }, 'Trying to fetch genres for game')
+        try {
+            const gameId = queryParams.game_id
+            const genres = await this.gamesService.getGameGenres(gameId)
+            if (!genres) {
+                throw new NotFoundException('No genres found for game')
+            }
+            this.logger.info({ genres }, 'Genres from controller')
+
+            return genres
+        } catch (error: unknown) {
+            if (error instanceof NotFoundException) {
+                throw new HttpException('Game not found.', HttpStatus.NOT_FOUND)
+            }
+            this.logger.error({ error }, 'Error in getGameGenres:')
+            throw new InternalServerErrorException(error)
         }
     }
 }

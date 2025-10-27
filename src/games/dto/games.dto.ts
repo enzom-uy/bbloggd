@@ -22,3 +22,8 @@ export class GetGamePlatformsQueryParams {
     })
     abbreviated?: boolean
 }
+
+export class GetGameGenresQueryParams {
+    @IsString()
+    game_id: string
+}
