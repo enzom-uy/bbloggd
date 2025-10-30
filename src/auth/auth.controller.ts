@@ -29,6 +29,11 @@ export class AuthController {
         )
 
         // TODO: Additional sign-in logic
-        return { url: 'http://localhost:3000/signed-in' }
+        return { url: 'http://localhost:3000/api/auth/signed-in' }
+    }
+
+    @Get('signed-in')
+    signedIn(): { signedIn: boolean } {
+        return { signedIn: true }
     }
 }

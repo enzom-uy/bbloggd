@@ -6,8 +6,6 @@ import { PinoLogger } from 'nestjs-pino'
 
 @Injectable()
 export class GoogleService {
-    private readonly scopesAPI: string[]
-    private readonly credentialsPath: string
     constructor(
         private configService: ConfigService,
         private readonly logger: PinoLogger,
@@ -58,6 +56,7 @@ export class GoogleService {
         const email = googleUserInfo.data.email!
         return { email, refreshToken, accessToken }
     }
+
 }
 
 export interface IGoogleAuthCredentials {

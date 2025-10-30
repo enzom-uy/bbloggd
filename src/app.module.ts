@@ -52,6 +52,6 @@ import { GoogleService } from './auth/google/google.service'
         AuthModule,
     ],
     controllers: [AuthController],
-    providers: [],
+    providers: [AuthService, GoogleService],
 })
 export class AppModule {}
