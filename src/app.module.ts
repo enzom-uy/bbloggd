@@ -6,6 +6,9 @@ import { DbModule } from './db/db.module'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { LoggerModule } from 'nestjs-pino'
 import { AuthModule } from './auth/auth.module'
+import { AuthController } from './auth/auth.controller'
+import { AuthService } from './auth/auth.service'
+import { GoogleService } from './auth/google/google.service'
 
 @Module({
     imports: [
@@ -48,7 +51,7 @@ import { AuthModule } from './auth/auth.module'
         DbModule,
         AuthModule,
     ],
-    controllers: [],
+    controllers: [AuthController],
     providers: [],
 })
 export class AppModule {}
